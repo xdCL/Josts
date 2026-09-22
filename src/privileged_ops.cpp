@@ -114,14 +114,14 @@ PrivilegedResult ipc_failure(const std::wstring& stage,DWORD code=ERROR_INVALID_
     const std::wstring diagnostic=L"[IPC] "+stage+L" — código "+std::to_wstring(code)+L": "+error_message(code);
     log(diagnostic);
     return {false,code,
-        tr(L"No se pudo confirmar la operación administrativa. Se volverá a leer hosts; no se supone que el cambio haya funcionado.")+
+        std::wstring(tr(L"No se pudo confirmar la operación administrativa. Se volverá a leer hosts; no se supone que el cambio haya funcionado."))+
         L"\r\n"+tr(L"Diagnóstico: ")+stage+L" ["+std::to_wstring(code)+L"] "+error_message(code),L""};
 }
 PrivilegedResult preparation_failure(const std::wstring& stage,DWORD code=ERROR_SUCCESS) {
     if(code==ERROR_SUCCESS) code=GetLastError();
     if(code==ERROR_SUCCESS) code=ERROR_INVALID_DATA;
     log(L"[IPC] "+stage+L" — código "+std::to_wstring(code)+L": "+error_message(code));
-    return {false,code,tr(L"No se pudo preparar el canal administrativo; todavía no se solicitó elevación. No se modificó el sistema.")+
+    return {false,code,std::wstring(tr(L"No se pudo preparar el canal administrativo; todavía no se solicitó elevación. No se modificó el sistema."))+
         L"\r\n"+tr(L"Diagnóstico: ")+stage+L" ["+std::to_wstring(code)+L"] "+error_message(code),L""};
 }
 void helper_failure(const std::wstring& stage,DWORD code,int& exit_code) {
