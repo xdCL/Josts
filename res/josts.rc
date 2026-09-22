@@ -1,0 +1,95 @@
+#pragma code_page(65001)
+#include <windows.h>
+#include "../src/resource.h"
+IDI_JOSTS ICON "icon.ico"
+#ifdef JOSTS_UI_TESTS
+1 24 "../tests/ui_test.manifest"
+#else
+1 24 "josts.manifest"
+#endif
+IDR_FONT_DMSANS_REGULAR RCDATA "DM_Sans/DMSans-Regular.ttf"
+IDR_FONT_DMSANS_MEDIUM RCDATA "DM_Sans/DMSans-Medium.ttf"
+IDR_FONT_DMSANS_BOLD RCDATA "DM_Sans/DMSans-Bold.ttf"
+IDR_FONT_DMSANS_ITALIC RCDATA "DM_Sans/DMSans-Italic.ttf"
+IDR_LICENSE RCDATA "../LICENSE_DM_Sans.txt"
+IDR_PRELOAD RCDATA "../hosts.txt"
+IDR_FONT_MATERIAL_ICONS RCDATA "MaterialIcons-Regular.ttf"
+IDR_LICENSE_MATERIAL_ICONS RCDATA "../LICENSE_Material_Icons.txt"
+IDR_LICENSE_LLVM_MINGW RCDATA "../LICENSE_LLVM_MinGW.txt"
+IDR_LICENSE_JOSTS_ES RCDATA "../LICENSE.txt"
+IDR_LICENSE_JOSTS_EN RCDATA "../LICENSE_EN.txt"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,1,1,0
+ PRODUCTVERSION 1,1,1,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+BEGIN
+ BLOCK "StringFileInfo"
+ BEGIN
+  BLOCK "340A04B0"
+  BEGIN
+   VALUE "CompanyName", "xdCL\0"
+   VALUE "ProductName", "Josts\0"
+   VALUE "FileDescription", "Gestor de hosts para entornos educativos\0"
+   VALUE "FileVersion", "1.1.1.0\0"
+   VALUE "ProductVersion", "1.1.1.0\0"
+   VALUE "LegalCopyright", "© xdCL\0"
+  END
+  BLOCK "040904B0"
+  BEGIN
+   VALUE "CompanyName", "xdCL\0"
+   VALUE "ProductName", "Josts\0"
+   VALUE "FileDescription", "Hosts manager for schools\0"
+   VALUE "FileVersion", "1.1.1.0\0"
+   VALUE "ProductVersion", "1.1.1.0\0"
+   VALUE "LegalCopyright", "© xdCL\0"
+  END
+ END
+ BLOCK "VarFileInfo"
+ BEGIN
+  VALUE "Translation", 0x340a, 1200, 0x0409, 1200
+ END
+END
+
+IDD_NOTICE DIALOGEX 0, 0, 400, 206
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_CENTER
+CAPTION "Josts"
+FONT 10, "DM Sans"
+BEGIN
+ EDITTEXT IDC_NOTICE_TEXT, 12, 12, 376, 146, ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
+ PUSHBUTTON "Aceptar", IDOK, 303, 170, 85, 24, BS_OWNERDRAW | WS_TABSTOP
+ PUSHBUTTON "Sí", IDYES, 121, 170, 85, 24, BS_OWNERDRAW | WS_TABSTOP
+ PUSHBUTTON "No", IDNO, 212, 170, 85, 24, BS_OWNERDRAW | WS_TABSTOP
+ PUSHBUTTON "Cancelar", IDCANCEL, 303, 170, 85, 24, BS_OWNERDRAW | WS_TABSTOP
+END
+
+IDD_ENTRY DIALOGEX 0, 0, 245, 100
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_CENTER
+CAPTION "Entrada de hosts"
+FONT 10, "DM Sans"
+BEGIN
+ LTEXT "Dirección IP:", IDC_IP_LABEL, 10, 13, 63, 12
+ EDITTEXT IDC_IP, 76, 10, 158, 16, ES_AUTOHSCROLL
+ LTEXT "Dominio:", IDC_DOMAIN_LABEL, 10, 40, 63, 12
+ EDITTEXT IDC_DOMAIN, 76, 37, 158, 16, ES_AUTOHSCROLL
+ PUSHBUTTON "Guardar", IDOK, 76, 67, 75, 21, BS_OWNERDRAW | WS_TABSTOP
+ PUSHBUTTON "Cancelar", IDCANCEL, 159, 67, 75, 21, BS_OWNERDRAW | WS_TABSTOP
+END
+
+IDD_ABOUT DIALOGEX 0, 0, 390, 308
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_CENTER
+CAPTION "Acerca de Josts"
+FONT 10, "DM Sans"
+BEGIN
+ LTEXT "Josts v1.1.1 — Gestor de hosts para entornos educativos", IDC_ABOUT_TITLE, 12, 11, 366, 17
+ LTEXT "Desarrollado por xdCL", IDC_ABOUT_AUTHOR, 12, 31, 366, 15
+ LTEXT "Tipografía: DM Sans (Google Fonts, SIL Open Font License 1.1)", IDC_ABOUT_FONT, 12, 50, 366, 15
+ LTEXT "© xdCL — Uso gratuito para fines o entornos educativos", IDC_ABOUT_COPYRIGHT, 12, 69, 366, 15
+ LTEXT "Iconos: Material Icons (Google, Apache License 2.0)", IDC_ABOUT_ICONS, 12, 88, 366, 15
+ LTEXT "No entenderás su utilidad hasta que lo uses", IDC_ABOUT_TAGLINE, 12, 108, 366, 18
+ EDITTEXT IDC_LICENSE, 12, 132, 366, 140, ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
+ PUSHBUTTON "Cerrar", IDOK, 303, 278, 75, 22, BS_OWNERDRAW | WS_TABSTOP
+END
