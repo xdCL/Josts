@@ -1,0 +1,54 @@
+name: Windows build
+
+on:
+  push:
+    branches: [ "dev/v1.1.1" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure MSVC x86
+        shell: pwsh
+        run: |
+          cmake -S . -B build -A Win32 -DJOSTS_REQUIRE_X86=ON -DJOSTS_BUILD_TESTS=ON
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C Release --output-on-failure
+
+      - name: Stage executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifact | Out-Null
+          $candidates = @(
+            "build/Release/Josts.exe",
+            "build/Josts.exe"
+          )
+          $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw "No se encontró Josts.exe después de compilar." }
+          Copy-Item $exe "artifact/Josts-v1.1.1-rc.exe"
+          Get-FileHash "artifact/Josts-v1.1.1-rc.exe" -Algorithm SHA256 |
+            Format-List | Out-File "artifact/SHA256.txt"
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Josts-v1.1.1-Windows-x86
+          path: artifact/*
+          if-no-files-found: error
