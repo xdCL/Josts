@@ -226,7 +226,10 @@ PrivilegedResult request_privileged(HWND owner,const PrivilegedRequest& request)
     Com com;
     SHELLEXECUTEINFOW launch{}; launch.cbSize=sizeof(launch); launch.hwnd=owner;
     launch.fMask=SEE_MASK_NOCLOSEPROCESS|SEE_MASK_NOASYNC|SEE_MASK_FLAG_NO_UI;
-    launch.lpVerb=L"runas"; launch.lpFile=exe.c_str(); launch.lpParameters=arguments.c_str(); launch.nShow=SW_HIDE;
+    launch.lpVerb=L"runas"; launch.lpFile=exe.c_str(); launch.lpParameters=arguments.c_str();
+    // Keep the elevated broker visible to Windows instead of deliberately hiding it.
+    // It has no interactive UI, so SW_SHOWNORMAL does not create an extra application window.
+    launch.nShow=SW_SHOWNORMAL;
     log(tr(L"Se requieren permisos de administrador. Solicitando elevación UAC para una operación."));
     if(!
 #ifdef JOSTS_BROKER_TESTS
