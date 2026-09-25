@@ -144,7 +144,8 @@ std::wstring elevation_error(DWORD code,bool denied) {
 }
 bool encode_request(const PrivilegedRequest& request,std::string& wire) {
     const auto op=static_cast<DWORD>(request.operation);
-    if(op<1||op>4||(op!=4&&!hex(request.revision,64))||request.entries.size()>100000) return false;
+    const bool missing_apply=op==1&&request.revision=="MISSING";
+    if(op<1||op>4||(op!=4&&!missing_apply&&!hex(request.revision,64))||request.entries.size()>100000) return false;
     if(op!=1&&!request.entries.empty()) return false;
     wire="JOSTS-1.1\n"+std::to_string(op)+"\n"+(language()==Language::English?"1":"0")+"\n"+request.revision+"\n";
     for(const auto& e:request.entries) {
@@ -160,7 +161,7 @@ bool decode_request(const std::string& wire,PrivilegedRequest& request) {
     if(!std::getline(in,magic)||magic!="JOSTS-1.1"||!std::getline(in,op)||op.size()!=1||op[0]<'1'||op[0]>'4'||
        !std::getline(in,lang)||(lang!="0"&&lang!="1")||!std::getline(in,revision)) return false;
     request={}; request.operation=static_cast<PrivilegedOperation>(op[0]-'0'); request.revision=revision;
-    if(request.operation!=PrivilegedOperation::Edge&&!hex(revision,64)) return false;
+    if(request.operation!=PrivilegedOperation::Edge&&!(request.operation==PrivilegedOperation::Apply&&revision=="MISSING")&&!hex(revision,64)) return false;
     if(request.operation==PrivilegedOperation::Edge&&!revision.empty()) return false;
     while(std::getline(in,line)) {
         if(request.operation!=PrivilegedOperation::Apply||line.empty()||line.size()>300) return false;
