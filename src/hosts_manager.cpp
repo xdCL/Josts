@@ -28,9 +28,43 @@ bool unchanged(const std::string& bytes,const std::string& revision,std::wstring
     if(revision.empty()||sha256(bytes)==revision) return true;
     error=tr(L"El archivo hosts fue modificado externamente. Se recargará su estado; revisa los cambios antes de volver a aplicar."); return false;
 }
+enum class FileKind { Regular, Missing, Directory, ReparsePoint, Error };
+struct FileProbe {
+    FileKind kind=FileKind::Error;
+    DWORD code=ERROR_SUCCESS;
+    DWORD attributes=0;
+    FILETIME write_time{};
+};
+FileProbe probe_file(const std::wstring& path) {
+    FileProbe result;
+    if(path.empty()) { result.code=ERROR_PATH_NOT_FOUND; return result; }
+    HANDLE file=CreateFileW(path.c_str(),FILE_READ_ATTRIBUTES,
+                            FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                            nullptr,OPEN_EXISTING,
+                            FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+    if(file==INVALID_HANDLE_VALUE) {
+        result.code=GetLastError();
+        if(result.code==ERROR_FILE_NOT_FOUND||result.code==ERROR_PATH_NOT_FOUND)
+            result.kind=FileKind::Missing;
+        return result;
+    }
+    BY_HANDLE_FILE_INFORMATION info{};
+    if(!GetFileInformationByHandle(file,&info)) {
+        result.code=GetLastError();
+        CloseHandle(file);
+        return result;
+    }
+    CloseHandle(file);
+    result.attributes=info.dwFileAttributes;
+    result.write_time=info.ftLastWriteTime;
+    result.code=ERROR_SUCCESS;
+    if(info.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY) result.kind=FileKind::Directory;
+    else if(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT) result.kind=FileKind::ReparsePoint;
+    else result.kind=FileKind::Regular;
+    return result;
+}
 bool regular_file(const std::wstring& path) {
-    DWORD attr=GetFileAttributesW(path.c_str());
-    return attr!=INVALID_FILE_ATTRIBUTES&&!(attr&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT));
+    return probe_file(path).kind==FileKind::Regular;
 }
 bool blocking_ip(const std::wstring& ip) {
     return ip==L"0.0.0.0"||ip==L"127.0.0.1"||ip==L"::1";
@@ -50,12 +84,13 @@ bool stage_file(const std::wstring& destination,const std::string& bytes,std::ws
 HostsManager::HostsManager(const std::wstring& custom_path,const std::wstring& custom_portable_backup) {
     if(!custom_path.empty()) path_=custom_path;
     else {
-        wchar_t path[MAX_PATH]={};
-        UINT n=GetSystemDirectoryW(path,MAX_PATH);
+        wchar_t windows[MAX_PATH]={};
+        UINT n=GetWindowsDirectoryW(windows,MAX_PATH);
         if(n&&n<MAX_PATH) {
-            // System32\drivers\etc is exempt from WOW64 file-system redirection.
-            // Keep the canonical path visible to users instead of the virtual Sysnative alias.
-            path_=join(std::wstring(path,n),L"drivers\\etc\\hosts");
+            // Build the canonical native path explicitly. Microsoft documents
+            // %windir%\System32\drivers\etc as exempt from WOW64 redirection,
+            // so the same path is valid from Josts' x86 build on 32- and 64-bit Windows.
+            path_=join(std::wstring(windows,n),L"System32\\drivers\\etc\\hosts");
         }
     }
     system_backup_=path_+L".bak_original";
@@ -85,9 +120,28 @@ static bool block_span(const std::wstring& s,size_t& begin,size_t& end,std::wstr
 }
 bool HostsManager::read_current(std::string& bytes,TextFile& text,std::wstring& error) {
     if(path_.empty()) { error=tr(L"No se pudo resolver la carpeta de sistema."); return false; }
+    const FileProbe probe=probe_file(path_);
+    if(probe.kind==FileKind::Missing) {
+        error=tr(L"El archivo hosts no existe en la ruta esperada. No se modificó el sistema."); return false;
+    }
+    if(probe.kind==FileKind::Directory) {
+        error=tr(L"La ruta de hosts apunta a una carpeta, no a un archivo. No se modificó el sistema."); return false;
+    }
+    if(probe.kind==FileKind::ReparsePoint) {
+        error=tr(L"El archivo hosts es un enlace o reparse point. Por seguridad no se modificó."); return false;
+    }
+    if(probe.kind==FileKind::Error) {
+        error=tr(L"Windows no permitió comprobar el archivo hosts: ")+error_message(probe.code)+
+              L" ["+std::to_wstring(probe.code)+L"]";
+        log(L"[HOSTS] No se pudo inspeccionar "+path_+L" — código "+std::to_wstring(probe.code)+L": "+error_message(probe.code));
+        return false;
+    }
     DWORD code=0;
-    if(!regular_file(path_)) { error=tr(L"El hosts no existe, no es un archivo normal o es un enlace. No se modificó el sistema."); return false; }
-    if(!read_bytes(path_,bytes,code)) { error=tr(L"No se pudo leer hosts: ")+error_message(code); return false; }
+    if(!read_bytes(path_,bytes,code)) {
+        error=tr(L"No se pudo leer hosts: ")+error_message(code)+L" ["+std::to_wstring(code)+L"]";
+        log(L"[HOSTS] Lectura fallida "+path_+L" — código "+std::to_wstring(code)+L": "+error_message(code));
+        return false;
+    }
     if(!decode(bytes,text)) { error=tr(L"Codificación del hosts no válida; no se modificó."); return false; }
     return true;
 }
@@ -162,22 +216,27 @@ bool HostsManager::atomic_replace(const std::string& expected,const std::string&
     return true;
 }
 bool HostsManager::snapshot(Snapshot& out,std::wstring& error) {
-    WIN32_FILE_ATTRIBUTE_DATA attributes{};
-    if(!GetFileAttributesExW(path_.c_str(),GetFileExInfoStandard,&attributes)) {
-        const DWORD code=GetLastError();
-        if(code==ERROR_FILE_NOT_FOUND) {
-            out=Snapshot{}; out.revision="MISSING"; out.state=HostsState::Missing; error.clear(); return true;
-        }
-        error=tr(L"No se pudo leer hosts: ")+error_message(code); return false;
+    const FileProbe probe=probe_file(path_);
+    if(probe.kind==FileKind::Missing) {
+        out=Snapshot{}; out.revision="MISSING"; out.state=HostsState::Missing; error.clear(); return true;
     }
-    if(attributes.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)) {
-        error=tr(L"El hosts no es un archivo normal. No se modificó el sistema."); return false;
+    if(probe.kind==FileKind::Directory) {
+        error=tr(L"La ruta de hosts apunta a una carpeta, no a un archivo. No se modificó el sistema."); return false;
+    }
+    if(probe.kind==FileKind::ReparsePoint) {
+        error=tr(L"El archivo hosts es un enlace o reparse point. Por seguridad no se modificó."); return false;
+    }
+    if(probe.kind==FileKind::Error) {
+        error=tr(L"Windows no permitió comprobar el archivo hosts: ")+error_message(probe.code)+
+              L" ["+std::to_wstring(probe.code)+L"]";
+        log(L"[HOSTS] Snapshot fallido "+path_+L" — código "+std::to_wstring(probe.code)+L": "+error_message(probe.code));
+        return false;
     }
     std::string bytes; TextFile text;
     if(!read_current(bytes,text,error)) return false;
     size_t begin=0,end=0;
     if(!block_span(text.text,begin,end,error)) return false;
-    out=Snapshot{}; out.revision=sha256(bytes); out.write_time=attributes.ftLastWriteTime;
+    out=Snapshot{}; out.revision=sha256(bytes); out.write_time=probe.write_time;
     if(begin!=std::wstring::npos) out.state=HostsState::Patched;
 
     size_t pos=0;
