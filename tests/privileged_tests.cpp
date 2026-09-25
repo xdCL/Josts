@@ -74,7 +74,12 @@ int main() {
     assert(request_privileged(nullptr,request).ok);
     assert(read_bytes(path,bytes,error)&&bytes==original);
     const std::wstring missing=join(root,L"missing"); HostsManager missing_manager(missing);
-    assert(!missing_manager.snapshot(before,message)&&!exists(missing));
+    assert(missing_manager.snapshot(before,message)&&before.state==HostsState::Missing&&before.revision=="MISSING"&&!exists(missing));
+    PrivilegedRequest missing_request; missing_request.operation=PrivilegedOperation::Apply; missing_request.revision="MISSING";
+    missing_request.entries={{L"127.0.0.1",L"missing.example",false}};
+    std::string missing_wire; assert(encode_request(missing_request,missing_wire));
+    PrivilegedRequest missing_decoded; assert(decode_request(missing_wire,missing_decoded));
+    assert(missing_decoded.revision=="MISSING"&&missing_decoded.entries.size()==1);
     std::cout<<"IPC, protocol validation, cancellation, denial, stale state, restore and shared-state tests passed\n";
     return 0;
 }
