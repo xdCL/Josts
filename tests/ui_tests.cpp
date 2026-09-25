@@ -243,13 +243,18 @@ int main() {
         SendMessageW(window,WM_CLOSE,0,0); pump();
     }
     {
-        const std::string conflict="127.0.0.1 quick-test.example\r\n";
+        // A conflicting external mapping no longer aborts the whole battery. Josts preserves it,
+        // applies the remaining rules and stays open so the conflict can be reviewed.
+        const std::string conflict="120.0.0.1 quick-test.example\r\n";
         const std::wstring dir=fixture(root,L"conflict",conflict);
         Ui ui(instance,fonts); HWND window=UiTestAccess::create(ui,dir); assert(window); await_action(ui);
         UiTestAccess::click(ui,UiTestAccess::quick(ui)); await_action(ui);
-        assert(UiTestAccess::failure(ui)&&UiTestAccess::deadline(ui)==0);
-        std::string bytes; assert(read_bytes(join(dir,L"system-hosts"),bytes,error)&&bytes==conflict);
-        assert(!exists(join(dir,L"system-hosts.bak_original")));
+        assert(UiTestAccess::success(ui)&&UiTestAccess::deadline(ui)==0);
+        assert(UiTestAccess::status(ui,L"0.0.0.0",L"quick-test.example")==L"Conflicto externo");
+        std::string bytes; assert(read_bytes(join(dir,L"system-hosts"),bytes,error));
+        assert(bytes.find("120.0.0.1 quick-test.example")!=std::string::npos);
+        assert(bytes.find("0.0.0.0 quick-test.example")==std::string::npos);
+        assert(exists(join(dir,L"system-hosts.bak_original")));
         SendMessageW(window,WM_CLOSE,0,0); pump();
     }
     {
