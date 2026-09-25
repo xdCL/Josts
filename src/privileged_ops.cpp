@@ -177,7 +177,10 @@ bool decode_request(const std::string& wire,PrivilegedRequest& request) {
 PrivilegedResult execute_privileged(HostsManager& manager,const PrivilegedRequest& request) {
     PrivilegedResult result; std::wstring error;
     switch(request.operation) {
-    case PrivilegedOperation::Apply: result.ok=manager.apply(request.entries,error,request.revision); break;
+    case PrivilegedOperation::Apply:
+        result.ok=manager.apply(request.entries,error,request.revision);
+        if(result.ok&&!error.empty()) result.warning=error;
+        break;
     case PrivilegedOperation::Remove: result.ok=manager.remove_own(error,request.revision); break;
     case PrivilegedOperation::Restore: result.ok=manager.restore(error,request.revision); break;
     case PrivilegedOperation::Edge:
@@ -200,7 +203,13 @@ PrivilegedResult request_privileged(HWND owner,const PrivilegedRequest& request)
 #endif
     ) {
         HostsManager manager; auto result=execute_privileged(manager,request);
-        if(result.ok&&request.operation!=PrivilegedOperation::Edge) result.warning=flush_dns();
+        if(result.ok&&request.operation!=PrivilegedOperation::Edge) {
+            const std::wstring dns=flush_dns();
+            if(!dns.empty()) {
+                if(!result.warning.empty()) result.warning+=L"\r\n";
+                result.warning+=dns;
+            }
+        }
         return result;
     }
 
@@ -340,7 +349,13 @@ bool privileged_entry(int& exit_code) {
         ;
     auto result=execute_privileged(manager,request);
 #ifndef JOSTS_BROKER_TESTS
-    if(result.ok&&request.operation!=PrivilegedOperation::Edge) result.warning=flush_dns();
+    if(result.ok&&request.operation!=PrivilegedOperation::Edge) {
+        const std::wstring dns=flush_dns();
+        if(!dns.empty()) {
+            if(!result.warning.empty()) result.warning+=L"\r\n";
+            result.warning+=dns;
+        }
+    }
 #endif
     const std::string reply=(result.ok?"1\n":"0\n")+utf8(result.message+L"\n"+result.warning);
     if(!send(pipe.h,reply)) { helper_failure(L"enviar resultado",GetLastError(),exit_code); return true; }
