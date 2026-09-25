@@ -3,7 +3,7 @@
 #include <set>
 
 namespace josts {
-enum class HostsState { Original, Patched, ThirdParty };
+enum class HostsState { Original, Patched, ThirdParty, Missing };
 struct Snapshot {
     std::set<std::wstring> own;
     std::set<std::wstring> foreign;
@@ -22,9 +22,10 @@ public:
     bool remove_own(std::wstring& error,const std::string& expected_revision="");
     bool restore(std::wstring& error,const std::string& expected_revision="");
 private:
-    std::wstring path_, system_backup_;
+    std::wstring path_, system_backup_, missing_backup_;
     bool read_current(std::string& bytes,TextFile& text,std::wstring& error);
-    bool ensure_backups(const std::string& original,std::wstring& error);
+    bool ensure_backups(const std::string& original,std::wstring& error,bool original_missing=false);
     bool atomic_replace(const std::string& expected,const std::string& replacement,std::wstring& error);
+    bool atomic_create(const std::string& replacement,std::wstring& error);
 };
 }
