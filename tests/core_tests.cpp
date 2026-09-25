@@ -57,6 +57,36 @@ int main() {
         assert(!checked.remove_own(error,current.revision)); CloseHandle(lock);
         assert(checked.remove_own(error,current.revision));
         assert(read_bytes(file,restored,code)&&restored==external);
+
+        // A pre-existing equivalent blocker satisfies the rule even with another sinkhole IP.
+        const auto equivalent_file=join(clean,L"equivalent-hosts");
+        const std::string equivalent_external="0.0.0.0 already-blocked.example\r\n";
+        assert(write_bytes(equivalent_file,equivalent_external,code));
+        HostsManager equivalent(equivalent_file); Snapshot equivalent_snapshot;
+        assert(equivalent.snapshot(equivalent_snapshot,error));
+        error.clear();
+        assert(equivalent.apply({{L"127.0.0.1",L"already-blocked.example",false},{L"127.0.0.1",L"new-rule.example",false}},error,equivalent_snapshot.revision));
+        assert(error.empty());
+        assert(read_bytes(equivalent_file,restored,code));
+        assert(restored.find("0.0.0.0 already-blocked.example")!=std::string::npos);
+        assert(restored.find("127.0.0.1 already-blocked.example")==std::string::npos);
+        assert(restored.find("127.0.0.1 new-rule.example")!=std::string::npos);
+
+        // A genuinely different external mapping is preserved and skipped, but must not abort
+        // the remaining Josts battery.
+        const auto conflict_file=join(clean,L"conflict-hosts");
+        const std::string conflict_external="120.0.0.1 www.tiktok.com\r\n";
+        assert(write_bytes(conflict_file,conflict_external,code));
+        HostsManager conflict_manager(conflict_file); Snapshot conflict_snapshot;
+        assert(conflict_manager.snapshot(conflict_snapshot,error));
+        error.clear();
+        assert(conflict_manager.apply({{L"127.0.0.1",L"www.tiktok.com",false},{L"127.0.0.1",L"rest-of-list.example",false}},error,conflict_snapshot.revision));
+        assert(!error.empty()&&error.find(L"www.tiktok.com")!=std::wstring::npos);
+        assert(read_bytes(conflict_file,restored,code));
+        assert(restored.find("120.0.0.1 www.tiktok.com")!=std::string::npos);
+        assert(restored.find("127.0.0.1 www.tiktok.com")==std::string::npos);
+        assert(restored.find("127.0.0.1 rest-of-list.example")!=std::string::npos);
+
         const auto bad_backup=join(clean,L"backup-failure");
         assert(write_bytes(bad_backup,external,code)); assert(ensure_dir(bad_backup+L".bak_previous"));
         HostsManager cannot_backup(bad_backup);
