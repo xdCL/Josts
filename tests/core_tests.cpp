@@ -9,11 +9,11 @@
 using namespace josts;
 int main() {
     // Validate the real system path without reading or modifying the real hosts.
-    wchar_t system_dir[MAX_PATH]={};
-    const UINT length=GetSystemDirectoryW(system_dir,MAX_PATH);
+    wchar_t windows_dir[MAX_PATH]={};
+    const UINT length=GetWindowsDirectoryW(windows_dir,MAX_PATH);
     assert(length>0&&length<MAX_PATH);
     HostsManager system_manager;
-    assert(system_manager.path()==join(std::wstring(system_dir),L"drivers\\etc\\hosts"));
+    assert(system_manager.path()==join(std::wstring(windows_dir),L"System32\\drivers\\etc\\hosts"));
     DWORD binary_type=0;
     assert(GetBinaryTypeW(join(executable_dir(),L"Josts.exe").c_str(),&binary_type));
     assert(binary_type==(sizeof(void*)==4?SCS_32BIT_BINARY:SCS_64BIT_BINARY));
@@ -111,6 +111,14 @@ int main() {
         Snapshot created; assert(missing_manager.snapshot(created,error)&&created.state==HostsState::Patched);
         assert(missing_manager.restore(error,created.revision));
         assert(!exists(missing_file));
+    }
+    {
+        const auto directory_hosts=join(dir,L"directory-hosts");
+        assert(ensure_dir(directory_hosts));
+        HostsManager directory_manager(directory_hosts);
+        Snapshot directory_snapshot; error.clear();
+        assert(!directory_manager.snapshot(directory_snapshot,error));
+        assert(error.find(L"carpeta")!=std::wstring::npos);
     }
     const std::wstring malformed=join(dir,L"malformed");
     assert(write_bytes(malformed,"# ===== INICIO Josts =====\r\n0.0.0.0 x.com\r\n",code));
