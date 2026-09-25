@@ -371,6 +371,7 @@ void Ui::update_simple_view() {
         preload_entries_.empty()?tr(L"No hay dominios precargados. Revisa hosts.txt en el modo avanzado."):
         preload_errors_?tr(L"Revisa los errores de la precarga en el modo avanzado antes de aplicarla."):
         snapshot_.state==HostsState::Patched?tr(L"El bloqueo de Josts está activo. Puedes actualizarlo o retirarlo."):
+        snapshot_.state==HostsState::Missing?tr(L"El archivo hosts no existe. Josts puede crearlo al aplicar la lista."):
         tr(L"El bloqueo de Josts aún no está aplicado en este equipo.");
     SetWindowTextW(simple_hint_,hint);
     SendMessageW(simple_hint_,WM_SETFONT,(WPARAM)(close_at_?title_:regular_),TRUE);
@@ -451,7 +452,9 @@ void Ui::report(const std::wstring& message) {
 }
 void Ui::show_hosts_snapshot() {
     if(!hosts_available_) { SetWindowTextW(status_,tr(L"Estado de hosts: error de lectura")); update_simple_view(); return; }
-    const wchar_t* label=snapshot_.state==HostsState::Patched?tr(L"Parcheado por Josts"):snapshot_.state==HostsState::ThirdParty?tr(L"Modificado por terceros"):tr(L"Original");
+    const wchar_t* label=snapshot_.state==HostsState::Patched?tr(L"Parcheado por Josts"):
+        snapshot_.state==HostsState::ThirdParty?tr(L"Modificado por terceros"):
+        snapshot_.state==HostsState::Missing?tr(L"No encontrado"):tr(L"Original");
     std::wstring text=tr(L"Estado de hosts: "); text+=label;
     SetWindowTextW(status_,text.c_str());
     if(!filtered_.empty()) ListView_RedrawItems(list_,0,static_cast<int>(filtered_.size()-1));
@@ -471,6 +474,7 @@ void Ui::refresh_system() {
     WIN32_FILE_ATTRIBUTE_DATA attr{};
     const bool readable=GetFileAttributesExW(hosts_.path().c_str(),GetFileExInfoStandard,&attr)!=FALSE;
     if(readable&&hosts_available_&&CompareFileTime(&attr.ftLastWriteTime,&hosts_write_time_)==0) return;
+    if(!readable&&hosts_available_&&snapshot_.state==HostsState::Missing) return;
     if(close_at_) cancel_auto_close();
     HostsManager manager=hosts_;
     start_action(ACTION_REFRESH,tr(L"El archivo hosts cambió o no está disponible. Recargando su estado…"),[manager](ActionResult& result) mutable {
@@ -616,6 +620,10 @@ void Ui::export_file() {
 }
 void Ui::apply(bool selected_only,bool preload_only,bool close_after) {
     if(busy_||close_at_) return;
+    if(!hosts_available_) {
+        notice(window_,tr(L"No se puede aplicar porque el archivo hosts no está disponible o no es seguro modificarlo."),L"Josts",MB_OK|MB_ICONERROR);
+        return;
+    }
     if(preload_only&&(preload_entries_.empty()||preload_errors_)) {
         const wchar_t* error=tr(L"La precarga está vacía o contiene errores de formato. Revísala en el modo avanzado.");
         if(close_after) { quick_result_=true; finish_action(false,error); }
@@ -663,6 +671,10 @@ void Ui::apply(bool selected_only,bool preload_only,bool close_after) {
 }
 void Ui::remove_own() {
     if(busy_||close_at_) return;
+    if(!hosts_available_) {
+        notice(window_,tr(L"No se puede quitar el bloque porque el archivo hosts no está disponible."),L"Josts",MB_OK|MB_ICONERROR);
+        return;
+    }
     if(notice(window_,tr(L"¿Quitar únicamente el bloque de Josts del archivo hosts?"),tr(L"Confirmar desparche"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES) return;
     HWND target=window_; HostsManager manager=hosts_;
     const auto action=privileged_action_; const auto revision=snapshot_.revision;
@@ -677,6 +689,10 @@ void Ui::remove_own() {
 }
 void Ui::restore() {
     if(busy_||close_at_) return;
+    if(!hosts_available_) {
+        notice(window_,tr(L"No se puede restaurar porque el archivo hosts no está disponible."),L"Josts",MB_OK|MB_ICONERROR);
+        return;
+    }
     if(notice(window_,tr(L"¿Restablecer hosts desde el respaldo original? Se perderán también los cambios realizados por terceros."),tr(L"Confirmar restablecimiento"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES) return;
     HWND target=window_; HostsManager manager=hosts_;
     const auto action=privileged_action_; const auto revision=snapshot_.revision;
