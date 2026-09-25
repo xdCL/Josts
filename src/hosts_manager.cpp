@@ -32,6 +32,9 @@ bool regular_file(const std::wstring& path) {
     DWORD attr=GetFileAttributesW(path.c_str());
     return attr!=INVALID_FILE_ATTRIBUTES&&!(attr&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT));
 }
+bool blocking_ip(const std::wstring& ip) {
+    return ip==L"0.0.0.0"||ip==L"127.0.0.1"||ip==L"::1";
+}
 // Never truncate a predictable temporary file or follow a pre-existing link.
 bool stage_file(const std::wstring& destination,const std::string& bytes,std::wstring& temp,DWORD& code) {
     temp=destination+L"."+random_id()+L".tmp";
@@ -174,6 +177,7 @@ bool HostsManager::snapshot(Snapshot& out,std::wstring& error) {
     return true;
 }
 bool HostsManager::apply(const std::vector<Entry>& entries,std::wstring& error,const std::string& expected_revision) {
+    error.clear();
     FileLock lock(path_);
     if(lock.handle==INVALID_HANDLE_VALUE) { error=tr(L"No se pudo obtener acceso exclusivo para modificar hosts: ")+error_message(GetLastError()); return false; }
     std::string bytes; TextFile text;
@@ -188,6 +192,7 @@ bool HostsManager::apply(const std::vector<Entry>& entries,std::wstring& error,c
     if(!snapshot(current,error)) return false;
     if(current.revision!=sha256(bytes)) { error=tr(L"El archivo hosts fue modificado externamente. Se recargará su estado; revisa los cambios antes de volver a aplicar."); return false; }
     std::map<std::wstring,std::wstring> seen;
+    std::vector<std::wstring> conflicts;
     for(const Entry& item:entries) {
         Entry e=item; e.domain=lower(e.domain);
         if(!valid_ip(e.ip)||!valid_domain(e.domain)) { error=tr(L"La lista contiene una IP o un dominio inválido."); return false; }
@@ -197,17 +202,31 @@ bool HostsManager::apply(const std::vector<Entry>& entries,std::wstring& error,c
         }
         seen[e.domain]=e.ip;
         if(current.foreign.count(e.domain)) {
+            bool satisfied=false, conflict=false;
             for(const auto& key:current.foreign_mappings) {
                 const auto split=key.find(L'\n');
-                if(e.domain==L"localhost"&&e.ip==L"127.0.0.1"&&key==L"::1\nlocalhost") continue;
-                if(key.substr(split+1)==e.domain&&key.substr(0,split)!=e.ip) {
-                    error=tr(L"Una entrada externa usa otra IP para el dominio: ")+e.domain; return false;
-                }
+                if(split==std::wstring::npos||key.substr(split+1)!=e.domain) continue;
+                const std::wstring foreign_ip=key.substr(0,split);
+                if(foreign_ip==e.ip||(blocking_ip(foreign_ip)&&blocking_ip(e.ip))) satisfied=true;
+                else conflict=true;
             }
-            if(current.foreign_mappings.count(e.ip+L"\n"+e.domain)) continue;
+            // Never overwrite third-party mappings. Equivalent sinkhole/loopback mappings already
+            // satisfy a blocking rule; genuinely different mappings are skipped without aborting
+            // the rest of the Josts list.
+            if(conflict) { conflicts.push_back(e.domain); continue; }
+            if(satisfied) continue;
         }
         if(!valid_ip(e.ip)||!valid_domain(e.domain)) { error=tr(L"La lista contiene una IP o un dominio inválido."); return false; }
         block+=e.ip+L" "+e.domain+text.newline;
+    }
+    if(!conflicts.empty()) {
+        error=tr(L"Lista aplicada; se omitieron conflictos externos: ")+std::to_wstring(conflicts.size())+L" — ";
+        const size_t shown=std::min<size_t>(conflicts.size(),5);
+        for(size_t i=0;i<shown;++i) {
+            if(i) error+=L", ";
+            error+=conflicts[i];
+        }
+        if(conflicts.size()>shown) error+=L" (+"+std::to_wstring(conflicts.size()-shown)+L")";
     }
     block+=END; block+=text.newline;
     if(!updated.empty()&&updated.back()!=L'\n') updated=block+updated;
