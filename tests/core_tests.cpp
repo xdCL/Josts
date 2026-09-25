@@ -93,6 +93,25 @@ int main() {
         assert(!cannot_backup.apply({{L"0.0.0.0",L"safe.example",false}},error));
         assert(read_bytes(bad_backup,restored,code)&&restored==external);
     }
+    {
+        // Some managed Windows images may have no hosts file at all. Treat absence as a
+        // recoverable state, create the file only after an explicit apply, and remember
+        // that restore must return the machine to the original "missing" state.
+        const auto missing_dir=join(dir,L"missing-"+random_id()); assert(ensure_dir(missing_dir));
+        const auto missing_file=join(missing_dir,L"hosts");
+        HostsManager missing_manager(missing_file); Snapshot missing_snapshot;
+        error.clear();
+        assert(missing_manager.snapshot(missing_snapshot,error));
+        assert(missing_snapshot.state==HostsState::Missing&&missing_snapshot.revision=="MISSING");
+        assert(!exists(missing_file));
+        assert(missing_manager.apply({{L"127.0.0.1",L"missing-file.example",false}},error,missing_snapshot.revision));
+        assert(exists(missing_file));
+        assert(read_bytes(missing_file,restored,code)&&restored.find("missing-file.example")!=std::string::npos);
+        assert(exists(missing_file+L".bak_original_missing"));
+        Snapshot created; assert(missing_manager.snapshot(created,error)&&created.state==HostsState::Patched);
+        assert(missing_manager.restore(error,created.revision));
+        assert(!exists(missing_file));
+    }
     const std::wstring malformed=join(dir,L"malformed");
     assert(write_bytes(malformed,"# ===== INICIO Josts =====\r\n0.0.0.0 x.com\r\n",code));
     HostsManager bad(malformed,join(dir,L"other.bak"));
