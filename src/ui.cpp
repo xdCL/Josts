@@ -514,11 +514,26 @@ void Ui::refresh_filter() {
     for(size_t i=0;i<entries_.size();++i) if(needle.empty()||lower(entries_[i].domain).find(needle)!=std::wstring::npos||lower(entries_[i].ip).find(needle)!=std::wstring::npos) filtered_.push_back(i);
     if(list_) { ListView_SetItemCountEx(list_,static_cast<int>(filtered_.size()),LVSICF_NOINVALIDATEALL); InvalidateRect(list_,nullptr,FALSE); }
 }
+static bool blocking_target_ip(const std::wstring& ip) {
+    return ip==L"0.0.0.0"||ip==L"127.0.0.1"||ip==L"::1";
+}
+static bool foreign_mapping_satisfies(const Snapshot& snapshot,const Entry& e) {
+    const std::wstring domain=lower(e.domain);
+    for(const auto& key:snapshot.foreign_mappings) {
+        const auto split=key.find(L'\n');
+        if(split==std::wstring::npos||key.substr(split+1)!=domain) continue;
+        const std::wstring ip=key.substr(0,split);
+        if(ip==e.ip||(blocking_target_ip(ip)&&blocking_target_ip(e.ip))) return true;
+    }
+    return false;
+}
 std::wstring Ui::entry_status(const Entry& e) const {
     if(!hosts_available_) return tr(L"Estado no disponible");
-    const auto key=e.ip+L"\n"+lower(e.domain);
+    const auto domain=lower(e.domain);
+    const auto key=e.ip+L"\n"+domain;
     if(snapshot_.own_mappings.count(key)) return tr(L"Aplicada por Josts");
     if(snapshot_.foreign_mappings.count(key)) return tr(L"Activa fuera de Josts");
+    if(snapshot_.foreign.count(domain)) return foreign_mapping_satisfies(snapshot_,e)?tr(L"Bloqueada fuera de Josts"):tr(L"Conflicto externo");
     if(e.modified) return tr(L"Modificada");
     return tr(L"No aplicada");
 }
@@ -621,17 +636,29 @@ void Ui::apply(bool selected_only,bool preload_only,bool close_after) {
     const auto action=privileged_action_; const auto revision=snapshot_.revision;
     start_action(ACTION_APPLY,tr(L"Se requieren permisos de administrador para aplicar este cambio…"),[target,chosen,manager,action,revision](ActionResult& result) mutable {
         PrivilegedRequest request; request.operation=PrivilegedOperation::Apply; request.revision=revision; request.entries=chosen;
-        for(const auto& entry:chosen) result.applied.insert(entry.ip+L"\n"+lower(entry.domain));
         auto outcome=action(target,request);
         result.ok=outcome.ok; result.message=outcome.message; result.warning=outcome.warning;
         PostMessageW(target,WM_ACTION_STAGE,STAGE_VERIFYING,0);
         std::wstring error;
         result.snapshot_valid=manager.snapshot(result.snapshot,error);
         if(!result.snapshot_valid) { result.ok=false; result.message+=L"\r\n"+error; }
-        if(result.ok) for(const auto& key:result.applied) if(!result.snapshot.mappings.count(key)) {
+        size_t externally_satisfied=0, external_conflicts=0;
+        if(result.ok) for(const auto& entry:chosen) {
+            const std::wstring domain=lower(entry.domain);
+            const std::wstring key=entry.ip+L"\n"+domain;
+            if(result.snapshot.mappings.count(key)) { result.applied.insert(key); continue; }
+            if(result.snapshot.foreign.count(domain)) {
+                if(foreign_mapping_satisfies(result.snapshot,entry)) ++externally_satisfied;
+                else ++external_conflicts;
+                continue;
+            }
             result.ok=false; result.message=tr(L"Se escribió el parche, pero la lectura posterior no coincide con la lista. Josts seguirá abierto para revisarlo."); break;
         }
-        if(result.ok) result.message=tr(L"Lista aplicada y verificada en hosts: ")+std::to_wstring(result.applied.size())+(result.applied.size()==1?tr(L" dominio."):tr(L" dominios."));
+        if(result.ok) {
+            const size_t verified=result.applied.size()+externally_satisfied;
+            result.message=tr(L"Lista aplicada y verificada en hosts: ")+std::to_wstring(verified)+(verified==1?tr(L" dominio."):tr(L" dominios."));
+            (void)external_conflicts; // Conflicts are intentionally preserved and described in outcome.warning.
+        }
     },close_after);
 }
 void Ui::remove_own() {
@@ -854,7 +881,7 @@ LRESULT Ui::handle(UINT msg,WPARAM w,LPARAM l) {
         finish_action(result->ok,result->message);
         if(!result->warning.empty()) report(result->warning);
         if(result->operation==ACTION_PRELOAD&&!startup_checked_) show_welcome_result(result->ok);
-        if(result->ok&&result->quick&&result->operation==ACTION_APPLY) {
+        if(result->ok&&result->quick&&result->operation==ACTION_APPLY&&result->warning.empty()) {
             begin_auto_close(3000);
         } else if(result->ok&&result->operation==ACTION_IMPORT) {
             std::set<std::wstring> old; for(const Entry& e:entries_) old.insert(e.domain);
@@ -908,7 +935,7 @@ LRESULT Ui::handle(UINT msg,WPARAM w,LPARAM l) {
                     RECT cell=row_rect; cell.left=x+10; x+=ListView_GetColumnWidth(list_,col); cell.right=x-7;
                     COLORREF color=theme::text();
                     if(col==2) color=!hosts_available_?theme::muted():snapshot_.own_mappings.count(e.ip+L"\n"+lower(e.domain))?RGB(113,191,242):
-                        snapshot_.foreign_mappings.count(e.ip+L"\n"+lower(e.domain))?RGB(244,192,107):e.modified?theme::muted():RGB(121,216,163);
+                        snapshot_.foreign.count(lower(e.domain))?RGB(244,192,107):e.modified?theme::muted():RGB(121,216,163);
                     SetTextColor(d->nmcd.hdc,color);
                     DrawTextW(d->nmcd.hdc,values[col].c_str(),-1,&cell,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
                 }
