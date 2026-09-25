@@ -59,6 +59,7 @@ HostsManager::HostsManager(const std::wstring& custom_path,const std::wstring& c
         }
     }
     system_backup_=path_+L".bak_original";
+    missing_backup_=path_+L".bak_original_missing";
     // Kept as a source-compatible argument for old callers; never trust portable backups for restoration.
     (void)custom_portable_backup;
 }
@@ -90,13 +91,30 @@ bool HostsManager::read_current(std::string& bytes,TextFile& text,std::wstring& 
     if(!decode(bytes,text)) { error=tr(L"Codificación del hosts no válida; no se modificó."); return false; }
     return true;
 }
-bool HostsManager::ensure_backups(const std::string& original,std::wstring& error) {
+bool HostsManager::ensure_backups(const std::string& original,std::wstring& error,bool original_missing) {
     DWORD code=0;
     // The original belongs to this computer. Never restore an untrusted portable copy.
-    if(exists(system_backup_)) {
+    const bool has_file_backup=exists(system_backup_);
+    const bool has_missing_backup=exists(missing_backup_);
+    if(has_file_backup&&has_missing_backup) {
+        error=tr(L"Los respaldos originales del equipo son ambiguos. No se modificó hosts."); return false;
+    }
+    if(has_file_backup) {
         std::string bytes; TextFile decoded;
         if(!regular_file(system_backup_)||!read_bytes(system_backup_,bytes,code)||!decode(bytes,decoded)) {
             error=tr(L"El respaldo original del sistema no es válido. No se modificó hosts."); return false;
+        }
+    } else if(has_missing_backup) {
+        std::string marker;
+        if(!regular_file(missing_backup_)||!read_bytes(missing_backup_,marker,code)||marker!="JOSTS-ORIGINAL-MISSING\n") {
+            error=tr(L"El marcador de hosts ausente no es válido. No se modificó hosts."); return false;
+        }
+    } else if(original_missing) {
+        std::wstring temp;
+        if(!stage_file(missing_backup_,"JOSTS-ORIGINAL-MISSING\n",temp,code)||
+           !MoveFileExW(temp.c_str(),missing_backup_.c_str(),MOVEFILE_WRITE_THROUGH)) {
+            code=GetLastError(); if(!temp.empty()) DeleteFileW(temp.c_str());
+            error=tr(L"No se pudo guardar que el hosts original estaba ausente: ")+error_message(code); return false;
         }
     } else {
         std::wstring temp;
@@ -145,7 +163,16 @@ bool HostsManager::atomic_replace(const std::string& expected,const std::string&
 }
 bool HostsManager::snapshot(Snapshot& out,std::wstring& error) {
     WIN32_FILE_ATTRIBUTE_DATA attributes{};
-    GetFileAttributesExW(path_.c_str(),GetFileExInfoStandard,&attributes);
+    if(!GetFileAttributesExW(path_.c_str(),GetFileExInfoStandard,&attributes)) {
+        const DWORD code=GetLastError();
+        if(code==ERROR_FILE_NOT_FOUND) {
+            out=Snapshot{}; out.revision="MISSING"; out.state=HostsState::Missing; error.clear(); return true;
+        }
+        error=tr(L"No se pudo leer hosts: ")+error_message(code); return false;
+    }
+    if(attributes.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)) {
+        error=tr(L"El hosts no es un archivo normal. No se modificó el sistema."); return false;
+    }
     std::string bytes; TextFile text;
     if(!read_current(bytes,text,error)) return false;
     size_t begin=0,end=0;
@@ -180,8 +207,15 @@ bool HostsManager::apply(const std::vector<Entry>& entries,std::wstring& error,c
     error.clear();
     FileLock lock(path_);
     if(lock.handle==INVALID_HANDLE_VALUE) { error=tr(L"No se pudo obtener acceso exclusivo para modificar hosts: ")+error_message(GetLastError()); return false; }
+    const bool expected_missing=expected_revision=="MISSING";
     std::string bytes; TextFile text;
-    if(!read_current(bytes,text,error)||!unchanged(bytes,expected_revision,error)) return false;
+    if(expected_missing) {
+        DWORD attr=GetFileAttributesW(path_.c_str());
+        if(attr!=INVALID_FILE_ATTRIBUTES||GetLastError()!=ERROR_FILE_NOT_FOUND) {
+            error=tr(L"El archivo hosts fue modificado externamente. Se recargará su estado; revisa los cambios antes de volver a aplicar."); return false;
+        }
+        text.encoding=Encoding::Utf8; text.newline=L"\r\n"; text.text=L"";
+    } else if(!read_current(bytes,text,error)||!unchanged(bytes,expected_revision,error)) return false;
     size_t begin=0,end=0;
     if(!block_span(text.text,begin,end,error)) return false;
     std::wstring updated=text.text;
@@ -190,7 +224,10 @@ bool HostsManager::apply(const std::vector<Entry>& entries,std::wstring& error,c
     block+=CREDIT; block+=text.newline;
     Snapshot current;
     if(!snapshot(current,error)) return false;
-    if(current.revision!=sha256(bytes)) { error=tr(L"El archivo hosts fue modificado externamente. Se recargará su estado; revisa los cambios antes de volver a aplicar."); return false; }
+    if((expected_missing&&current.state!=HostsState::Missing)||
+       (!expected_missing&&current.revision!=sha256(bytes))) {
+        error=tr(L"El archivo hosts fue modificado externamente. Se recargará su estado; revisa los cambios antes de volver a aplicar."); return false;
+    }
     std::map<std::wstring,std::wstring> seen;
     std::vector<std::wstring> conflicts;
     for(const Entry& item:entries) {
@@ -233,10 +270,28 @@ bool HostsManager::apply(const std::vector<Entry>& entries,std::wstring& error,c
     else updated+=block;
     std::string replacement;
     if(!encode(text,updated,replacement)) { error=tr(L"No se pueden representar las entradas con la codificación original de hosts."); return false; }
-    if(bytes==replacement) return true;
-    if(!ensure_backups(bytes,error)) return false;
-    return atomic_replace(bytes,replacement,error);
+    if(!expected_missing&&bytes==replacement) return true;
+    if(!ensure_backups(bytes,error,expected_missing)) return false;
+    return expected_missing?atomic_create(replacement,error):atomic_replace(bytes,replacement,error);
 }
+bool HostsManager::atomic_create(const std::string& replacement,std::wstring& error) {
+    DWORD code=0;
+    if(GetFileAttributesW(path_.c_str())!=INVALID_FILE_ATTRIBUTES||GetLastError()!=ERROR_FILE_NOT_FOUND) {
+        error=tr(L"El archivo hosts apareció durante la operación. No se sobrescribió."); return false;
+    }
+    std::wstring temp;
+    if(!stage_file(path_,replacement,temp,code)) { error=tr(L"No fue posible escribir el archivo hosts: ")+error_message(code); return false; }
+    if(!MoveFileExW(temp.c_str(),path_.c_str(),MOVEFILE_WRITE_THROUGH)) {
+        code=GetLastError(); DeleteFileW(temp.c_str());
+        error=tr(L"No fue posible crear hosts: ")+error_message(code); return false;
+    }
+    std::string now;
+    if(!read_bytes(path_,now,code)||now!=replacement) {
+        error=tr(L"Se creó hosts, pero no se pudo verificar su contenido."); return false;
+    }
+    return true;
+}
+
 bool HostsManager::remove_own(std::wstring& error,const std::string& expected_revision) {
     FileLock lock(path_);
     if(lock.handle==INVALID_HANDLE_VALUE) { error=tr(L"No se pudo obtener acceso exclusivo para modificar hosts: ")+error_message(GetLastError()); return false; }
@@ -258,6 +313,18 @@ bool HostsManager::restore(std::wstring& error,const std::string& expected_revis
     if(lock.handle==INVALID_HANDLE_VALUE) { error=tr(L"No se pudo obtener acceso exclusivo para modificar hosts: ")+error_message(GetLastError()); return false; }
     std::string bytes; TextFile text;
     if(!read_current(bytes,text,error)||!unchanged(bytes,expected_revision,error)) return false;
+    if(exists(missing_backup_)&&!exists(system_backup_)) {
+        std::string marker; DWORD marker_code=0;
+        if(!regular_file(missing_backup_)||!read_bytes(missing_backup_,marker,marker_code)||marker!="JOSTS-ORIGINAL-MISSING\n") {
+            error=tr(L"El marcador de hosts ausente no es válido. No se modificó hosts."); return false;
+        }
+        if(!ensure_backups(bytes,error)) return false;
+        if(!DeleteFileW(path_.c_str())) { error=tr(L"No se pudo restaurar el estado original sin archivo hosts: ")+error_message(GetLastError()); return false; }
+        if(GetFileAttributesW(path_.c_str())!=INVALID_FILE_ATTRIBUTES||GetLastError()!=ERROR_FILE_NOT_FOUND) {
+            error=tr(L"No se pudo verificar la eliminación de hosts."); return false;
+        }
+        return true;
+    }
     std::wstring source=system_backup_;
     if(!regular_file(source)) { error=tr(L"No se encontró un respaldo original válido de este computador."); return false; }
     std::string backup; DWORD code=0;
