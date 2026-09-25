@@ -2,7 +2,7 @@ name: Windows build
 
 on:
   push:
-    branches: [ "dev/v1.1.1" ]
+    branches: [ "dev/v1.1.1", "dev/v1.2.0" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -42,13 +42,14 @@ jobs:
           )
           $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $exe) { throw "No se encontró Josts.exe después de compilar." }
-          Copy-Item $exe "artifact/Josts-v1.1.1-rc.exe"
-          Get-FileHash "artifact/Josts-v1.1.1-rc.exe" -Algorithm SHA256 |
+          $name = if ("${{ github.ref_name }}" -eq "dev/v1.2.0") { "Josts-v1.2.0-dev.exe" } else { "Josts-v1.1.1-rc.exe" }
+          Copy-Item $exe "artifact/$name"
+          Get-FileHash "artifact/$name" -Algorithm SHA256 |
             Format-List | Out-File "artifact/SHA256.txt"
 
       - name: Upload Windows executable
         uses: actions/upload-artifact@v4
         with:
-          name: Josts-v1.1.1-Windows-x86
+          name: Josts-Windows-x86-${{ github.ref_name }}
           path: artifact/*
           if-no-files-found: error
