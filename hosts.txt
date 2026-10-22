@@ -1,0 +1,372 @@
+# Josts - precarga de xdCL
+# Formato: dominio.com o 0.0.0.0 dominio.com; líneas con # son comentarios.
+# Copyright (c) 1993-2009 Microsoft Corp.
+#
+# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.
+#
+# This file contains the mappings of IP addresses to host names. Each
+# entry should be kept on an individual line. The IP address should
+# be placed in the first column followed by the corresponding host name.
+# The IP address and the host name should be separated by at least one
+# space.
+#
+# Additionally, comments (such as these) may be inserted on individual
+# lines or following the machine name denoted by a '#' symbol.
+#
+# For example:
+#
+#      102.54.94.97     rhino.acme.com          # source server
+#       38.25.63.10     x.acme.com              # x client host
+
+
+# localhost name resolution is handled within DNS itself.
+127.0.0.1       localhost
+::1             localhost
+
+
+# ====================================================================
+# ========= INICIO DE SITIOS BLOQUEADOS ==============================
+# ====================================================================
+
+
+# --- Plataformas de IA (General) ---
+127.0.0.1       ai.google.com
+127.0.0.1       anthropic.com
+127.0.0.1       api.anthropic.com
+127.0.0.1       api.character.ai
+127.0.0.1       api.openai.com
+127.0.0.1       api.perplexity.ai
+127.0.0.1       api.stability.ai
+127.0.0.1       api.venice.ai
+127.0.0.1       api-inference.huggingface.co
+127.0.0.1       bard.google.com
+127.0.0.1       bing.com
+127.0.0.1       blackbox.ai
+127.0.0.1       character.ai
+127.0.0.1       chat.openai.com
+127.0.0.1       claude.ai
+127.0.0.1       copilot.azure.com
+127.0.0.1       copilot.microsoft.com
+127.0.0.1       copilotstudio.microsoft.com
+127.0.0.1       gemini.google.com
+127.0.0.1       grok.x.com
+127.0.0.1       heypi.com
+127.0.0.1       huggingface.co
+127.0.0.1       labs.perplexity.ai
+127.0.0.1       lepton.ai
+127.0.0.1       makersuite.google.com
+127.0.0.1       oaiusercontent.com
+127.0.0.1       perplexity.ai
+127.0.0.1       phind.com
+127.0.0.1       pi.ai
+127.0.0.1       platform.openai.com
+127.0.0.1       poe.com
+127.0.0.1       sudowrite.com
+127.0.0.1       undetectable.ai
+127.0.0.1       www.undetectable.ai
+127.0.0.1       www.undetectableai.ai
+127.0.0.1       aihumanizer.ai
+127.0.0.1       monica.im
+127.0.0.1       www.monica.im
+127.0.0.1       bypass.hix.ai
+127.0.0.1       hix.ai
+127.0.0.1       www.hix.ai
+127.0.0.1       humbot.ai
+127.0.0.1       www.humbot.ai
+127.0.0.1       notegpt.io
+127.0.0.1       www.notepgpt.io
+127.0.0.1       gptinf.com
+127.0.0.1       www.gptinf.com
+127.0.0.1       moge.ai
+127.0.0.1       www.moge.ai
+127.0.0.1       gowinston.ai
+127.0.0.1       www.gowinston.ai
+127.0.0.1       bypassgpt.co
+127.0.0.1       www.bypassgpt.co
+127.0.0.1       aiundetect.com
+127.0.0.1       www.aiundetect.com
+127.0.0.1       gpthuman.ai
+127.0.0.1       www.gpthuman.ai
+127.0.0.1       humanizeaitext.ai
+127.0.0.1       www.humanizeaitext.ai
+127.0.0.1       ryne.ai
+127.0.0.1       www.ryne.ai
+127.0.0.1       grubby.ai
+127.0.0.1       www.grubby.ai
+127.0.0.1       upass.ai
+127.0.0.1       www.upass.ai
+127.0.0.1       decopy.ai
+127.0.0.1       www.decopy.ai
+127.0.0.1       writehuman.ai
+127.0.0.1       www.writehuman.ai
+127.0.0.1       walterwrites.ai
+127.0.0.1       www.walterwrites.ai
+127.0.0.1       netus.ai
+127.0.0.1       www.netus.ai
+127.0.0.1       www.gptzero.me
+127.0.0.1       gptzero.me
+127.0.0.1       humanizey.ai
+127.0.0.1       www.humanizey.ai
+127.0.0.1       unaimytext.com
+127.0.0.1       www.unaimytext.com
+127.0.0.1       undetectable.io
+127.0.0.1       www.undetectable.io
+127.0.0.1       getconch.ai
+127.0.0.1       www.getconch.ai
+127.0.0.1       originality.ai
+127.0.0.1       www.originality.ai
+127.0.0.1       rewritely.io
+127.0.0.1       www.rewritely.io
+127.0.0.1              stealthwriter.ai
+127.0.0.1       www.stealthwriter.ai
+127.0.0.1       essaydone.ai
+127.0.0.1       www.essaydone.ai
+127.0.0.1       aiundetect.com
+127.0.0.1       www.aiundetect.com
+127.0.0.1       cudekai.com
+127.0.0.1       www.cudekai.com
+127.0.0.1       sayhi2.ai
+127.0.0.1       www.sayhi2.ai
+127.0.0.1       essayflow.ai
+127.0.0.1       www.essayflow.ai
+127.0.0.1       humanize.im
+127.0.0.1       www.humanize.im
+127.0.0.1       decopy.ai
+127.0.0.1       www.decopy.ai
+127.0.0.1       detectordeia.org
+127.0.0.1       duey.ai
+127.0.0.1       www.duey.ai
+127.0.0.1       stealthgpt.ai
+127.0.0.1       www.stealthgpt.ai
+127.0.0.1       bypassgpt.ai
+127.0.0.1       aihumanizer.ai
+127.0.0.1       undetectableai.pro
+127.0.0.1       rewritify.ai
+127.0.0.1       www.rewritify.ai
+127.0.0.1       venice.ai
+127.0.0.1       venice.lol
+127.0.0.1       x.ai
+127.0.0.1       you.com
+127.0.0.1       zerogpt.com
+127.0.0.1       deepseek.net
+127.0.0.1       deepseek.com
+127.0.0.1       deepseek.es
+127.0.0.1       www.deepseek.com
+127.0.0.1       www.deepseek.net
+127.0.0.1       www.deepseek.es
+
+
+# --- IA de Imagen y Video ---
+127.0.0.1       clipdrop.co
+127.0.0.1       dalle.openai.com
+127.0.0.1       dreamstudio.ai
+127.0.0.1       firefly.adobe.com
+127.0.0.1       getimg.ai
+127.0.0.1       ideogram.ai
+127.0.0.1       leonardo.ai
+127.0.0.1       midjourney.com
+127.0.0.1       runwayml.com
+127.0.0.1       stability.ai 
+127.0.0.1       deepseek-espanol.chat
+
+
+
+
+# --- Asistentes de Escritura (IA) ---
+127.0.0.1       app.copy.ai
+127.0.0.1       app.grammarly.com
+127.0.0.1       copy.ai
+127.0.0.1       grammarly.com
+127.0.0.1       jasper.ai
+127.0.0.1       quillbot.com
+127.0.0.1       www.grammarly.com
+127.0.0.1       www.jasper.ai
+127.0.0.1       www.quillbot.com
+127.0.0.1       writesonic.com
+
+
+# --- Emuladores y Plataformas de Juegos ---
+127.0.0.1       bluestacks.com
+127.0.0.1       create.roblox.com
+127.0.0.1       es.bignox.com
+127.0.0.1       play.google.com
+127.0.0.1       roblox.com
+127.0.0.1       www.bluestacks.com
+127.0.0.1       www.roblox.com
+
+
+# --- Redes Sociales y Distracciones ---
+127.0.0.1       discord.com
+127.0.0.1       grok.ai
+127.0.0.1       www.grok.ai
+127.0.0.1       humanizeai.pro
+127.0.0.1       www.humanizeai.pro
+127.0.0.1       facebook.com
+127.0.0.1       fandom.com
+127.0.0.1       instagram.com
+127.0.0.1       notion.so
+127.0.0.1       reddit.com
+127.0.0.1       tiktok.com
+127.0.0.1       twitch.tv
+127.0.0.1       twitter.com
+127.0.0.1       wikia.com
+127.0.0.1       www.discord.com
+127.0.0.1       www.facebook.com
+127.0.0.1       www.fandom.com
+127.0.0.1       www.instagram.com
+127.0.0.1       www.notion.so
+127.0.0.1       www.reddit.com
+127.0.0.1       www.tiktok.com
+127.0.0.1       www.twitch.tv
+127.0.0.1       www.twitter.com
+127.0.0.1       www.x.com
+127.0.0.1       x.com
+
+# --- Juegos de clics y pruebas de velocidad del mouse ---
+127.0.0.1       cookieclicker.com
+127.0.0.1       www.cookieclicker.com
+127.0.0.1       cookieclicker.eu
+127.0.0.1       www.cookieclicker.eu
+127.0.0.1       orteil.dashnet.org
+127.0.0.1       clickerheroes.com
+127.0.0.1       www.clickerheroes.com
+127.0.0.1       cdn.clickerheroes.com
+127.0.0.1       clickergames.com
+127.0.0.1       www.clickergames.com
+127.0.0.1       clickspeedtest.com
+127.0.0.1       www.clickspeedtest.com
+127.0.0.1       clickspeedtest.net
+127.0.0.1       www.clickspeedtest.net
+127.0.0.1       cpstest.org
+127.0.0.1       www.cpstest.org
+127.0.0.1       cps-test.online
+127.0.0.1       www.cps-test.online
+127.0.0.1       playclick.games
+127.0.0.1       www.playclick.games
+127.0.0.1       clickcounter.io
+127.0.0.1       www.clickcounter.io
+
+
+# --- Contadores de teclado y juegos competitivos de mecanografía ---
+# Revise Nitro Type y otros sitios de escritura si se usan para clases.
+127.0.0.1       spacebarcounter.org
+127.0.0.1       www.spacebarcounter.org
+127.0.0.1       spacebarcounter.io
+127.0.0.1       www.spacebarcounter.io
+127.0.0.1       nitrotype.com
+127.0.0.1       www.nitrotype.com
+127.0.0.1       typeracer.com
+127.0.0.1       www.typeracer.com
+127.0.0.1       play.typeracer.com
+127.0.0.1       monkeytype.com
+127.0.0.1       www.monkeytype.com
+127.0.0.1       typinggames.zone
+127.0.0.1       www.typinggames.zone
+127.0.0.1       typingrooms.com
+127.0.0.1       www.typingrooms.com
+127.0.0.1       zty.pe
+127.0.0.1       www.zty.pe
+127.0.0.1       keymash.io
+127.0.0.1       www.keymash.io
+127.0.0.1       typings.gg
+127.0.0.1       www.typings.gg
+127.0.0.1       typingjet.com
+127.0.0.1       www.typingjet.com
+
+# --- Catálogos de descarga de software ---
+# Los subdominios de cada programa no admiten bloqueo comodín en hosts.
+127.0.0.1       uptodown.com
+127.0.0.1       www.uptodown.com
+127.0.0.1       en.uptodown.com
+127.0.0.1       minecraft.uptodown.com
+127.0.0.1       minecraft.en.uptodown.com
+127.0.0.1       softonic.com
+127.0.0.1       www.softonic.com
+127.0.0.1       en.softonic.com
+127.0.0.1       es.softonic.com
+127.0.0.1       windows.en.softonic.com
+127.0.0.1       minecraft.softonic.com
+127.0.0.1       minecraft.en.softonic.com
+
+# --- Lanzador no oficial de Minecraft y espejos de TLauncher ---
+127.0.0.1       tlauncher.org
+127.0.0.1       www.tlauncher.org
+127.0.0.1       fastrepo.org
+127.0.0.1       www.fastrepo.org
+127.0.0.1       vlauncher.net
+127.0.0.1       www.vlauncher.net
+127.0.0.1       tlauncher.ru.com
+127.0.0.1       www.tlauncher.ru.com
+127.0.0.1       tlauncher.com.ua
+127.0.0.1       www.tlauncher.com.ua
+127.0.0.1       tlauncher.co.com
+127.0.0.1       www.tlauncher.co.com
+
+# --- Almacenamiento y enlaces de descarga ---
+# OneDrive personal: sin bloquear login.live.com ni SharePoint.
+# Google Drive queda disponible.
+127.0.0.1       mega.nz
+127.0.0.1       www.mega.nz
+127.0.0.1       mega.io
+127.0.0.1       www.mega.io
+127.0.0.1       mediafire.com
+127.0.0.1       www.mediafire.com
+127.0.0.1       www3.mediafire.com
+127.0.0.1       onedrive.com
+127.0.0.1       www.onedrive.com
+127.0.0.1       onedrive.live.com
+127.0.0.1       1drv.ms
+
+# --- Portal de juegos en navegador ---
+127.0.0.1       crazygames.com
+127.0.0.1       www.crazygames.com
+127.0.0.1       kids.crazygames.com
+
+# --- Contenido de Microsoft Edge y MSN ---
+127.0.0.1       ntp.msn.com
+127.0.0.1       assets.msn.com
+127.0.0.1       api.msn.com
+127.0.0.1       edge.microsoft.com
+
+# --- Dominios adicionales solicitados: descargas, juegos y comercio ---
+127.0.0.1       adnxs.com
+127.0.0.1       bingapis.com
+127.0.0.1       opera.com
+127.0.0.1       firefox.com
+127.0.0.1       mozilla.org
+127.0.0.1       torproject.org
+127.0.0.1       muchosportables.com
+127.0.0.1       aliexpress.com
+127.0.0.1       shein.com
+127.0.0.1       temu.com
+127.0.0.1       mercadolibre.cl
+127.0.0.1       mercadolibre.com
+127.0.0.1       pendriveapps.com
+127.0.0.1       portableapps.com
+127.0.0.1       nucleovisual.com
+127.0.0.1       portablesprogramas.com
+127.0.0.1       gamezfull.com
+127.0.0.1       bajarjuegospcgratis.com
+127.0.0.1       chakielroms.com
+127.0.0.1       epicgames.com
+127.0.0.1       zona-leros.com
+127.0.0.1       gametop.com
+127.0.0.1       labsk.net
+127.0.0.1       problemasdepc.com
+127.0.0.1       tabernadegrog.blogspot.com
+127.0.0.1       elrincondemauro.mex.tl
+127.0.0.1       descargarjuegosportables.com
+127.0.0.1       compu-pc.com
+127.0.0.1       angellomix.com
+127.0.0.1       isladejuegos.com
+127.0.0.1       mob.org
+127.0.0.1       gamesfull.app
+127.0.0.1       gamesgx.net
+127.0.0.1       bignox.com
+127.0.0.1       forocoches.com
+127.0.0.1       zdescargas.org
+127.0.0.1       repack.info
+127.0.0.1       malavida.com
+
+# --- Sitio Wix solicitado ---
+127.0.0.1       soloportables.wixsite.com

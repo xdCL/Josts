@@ -1,0 +1,85 @@
+name: Windows build
+
+on:
+  push:
+    branches: [ "main", "dev/v1.1.1", "dev/v1.2.0", "release/v1.2.0" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure MSVC x86
+        shell: pwsh
+        run: |
+          cmake -S . -B build -A Win32 -DJOSTS_REQUIRE_X86=ON -DJOSTS_BUILD_TESTS=ON
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C Release --output-on-failure --no-tests=error --output-junit "$env:GITHUB_WORKSPACE/build/test-results.xml"
+
+      - name: Stage executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifact | Out-Null
+          $candidates = @(
+            "build/Release/Josts.exe",
+            "build/Josts.exe"
+          )
+          $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw "No se encontró Josts.exe después de compilar." }
+          $match = [regex]::Match((Get-Content CMakeLists.txt -Raw), 'project\(Josts VERSION (\d+\.\d+\.\d+) ')
+          if (-not $match.Success) { throw "No se encontró la versión del proyecto." }
+          $version = $match.Groups[1].Value
+          $info = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $exe).Path)
+          if ($info.FileVersion -ne "$version.0" -or $info.ProductVersion -ne "$version.0") {
+            throw "Los metadatos del EXE no coinciden con la versión $version."
+          }
+          $label = "v$version-dev"
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $expected = '^v' + [regex]::Escape($version) + '(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'
+            if ($env:GITHUB_REF_NAME -notmatch $expected) { throw "La etiqueta no coincide con la versión $version." }
+            $label = $env:GITHUB_REF_NAME
+          }
+          $name = "Josts-$label.exe"
+          Copy-Item $exe "artifact/$name"
+          $hash = (Get-FileHash "artifact/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name" | Set-Content artifact/SHA256.txt -Encoding utf8NoBOM
+          $sourceCommit = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo identificar el commit compilado." }
+          [ordered]@{
+            version = $version
+            file = $name
+            sha256 = $hash
+            bytes = (Get-Item "artifact/$name").Length
+            architecture = 'x86'
+            sourceCommit = $sourceCommit
+            eventCommit = $env:GITHUB_SHA
+            sourceRef = $env:GITHUB_REF
+            runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            runnerOS = $env:RUNNER_OS
+            toolchain = 'MSVC /MT'
+          } | ConvertTo-Json | Set-Content artifact/build-info.json -Encoding utf8NoBOM
+          Copy-Item build/test-results.xml artifact/test-results.xml
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Josts-Windows-x86
+          path: artifact/*
+          if-no-files-found: error

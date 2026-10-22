@@ -1,0 +1,25 @@
+Josts — Licencia de uso educativo y distribución sin modificaciones
+Versión 1.0 — 14 de septiembre de 2026
+© 2026 xdCL
+
+1. Alcance
+Estas condiciones se aplican a los elementos propios de Josts cuyos derechos correspondan a xdCL. Josts se ofrece gratuitamente para fines educativos o para su uso en entornos educativos, incluida la administración de sus computadores, redes y laboratorios. Se incluyen instituciones públicas y privadas; no es necesario que el administrador trabaje de forma voluntaria.
+
+2. Uso autorizado
+Se permite descargar, copiar y ejecutar Josts sin pagar una licencia, siempre que el uso tenga fines educativos o se realice en entornos educativos. Los usos fuera de ese alcance requieren autorización de xdCL.
+
+3. Distribución del programa original
+Se permite compartir gratuitamente el ejecutable original, sin modificarlo, para los usos autorizados. Deben conservarse el crédito a xdCL, estas condiciones y los avisos y licencias incorporados. No se permite atribuirse la autoría de Josts ni retirar o sustituir sus créditos. Compartir el ejecutable completo conserva la licencia que puede consultarse en «Acerca de»; no se exige acompañarlo de otro archivo.
+
+4. Programa sin modificaciones
+Esta licencia no concede permiso para alterar el código o el ejecutable propio de Josts, ni para crear o distribuir versiones modificadas o derivadas del programa. Para ello se requiere autorización de xdCL, salvo los derechos que la legislación aplicable permita ejercer sin esa autorización.
+
+5. Listas y configuración
+La restricción anterior no impide utilizar las funciones de Josts ni adaptar, importar, exportar o compartir listas de dominios y archivos de datos propios. Cada administrador puede ajustar hosts.txt y sus listas al contexto educativo, aplicar o retirar bloqueos y usar las opciones de configuración del programa. Estas acciones no se consideran modificaciones del software a efectos de esta licencia.
+
+6. Componentes de terceros y derechos conservados
+DM Sans, Material Icons, los componentes de LLVM-MinGW y los demás elementos de terceros conservan sus propias licencias y avisos. Esta licencia no restringe los permisos que sus titulares conceden sobre esos componentes ni los derechos que la ley no permita limitar. Sus textos están incorporados en «Acerca de» y se conservan también en los archivos de licencias del proyecto.
+
+Los derechos sobre los elementos propios de Josts no concedidos expresamente quedan reservados a xdCL. Esta es una licencia personalizada de uso educativo; no es una licencia de software libre ni de código abierto.
+
+El texto en español es la versión de referencia. La versión en inglés se facilita como traducción informativa.
