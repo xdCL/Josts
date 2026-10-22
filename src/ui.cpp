@@ -157,7 +157,7 @@ static INT_PTR CALLBACK about_dialog(HWND h,UINT msg,WPARAM w,LPARAM l) {
         SetWindowTextW(h,tr(L"Acerca de Josts"));
         SetDlgItemTextW(h,IDC_ABOUT_TAGLINE,tr(L"No entenderás su utilidad hasta que lo uses"));
         SetDlgItemTextW(h,IDOK,tr(L"Cerrar"));
-        SetDlgItemTextW(h,IDC_ABOUT_TITLE,tr(L"Josts v1.1.1 — Gestor de hosts para entornos educativos"));
+        SetDlgItemTextW(h,IDC_ABOUT_TITLE,tr(L"Josts v1.2.0 — Gestor de hosts para entornos educativos"));
         SetDlgItemTextW(h,IDC_ABOUT_AUTHOR,tr(L"Desarrollado por xdCL"));
         SetDlgItemTextW(h,IDC_ABOUT_FONT,tr(L"Tipografía: DM Sans (Google Fonts, SIL Open Font License 1.1)"));
         SetDlgItemTextW(h,IDC_ABOUT_COPYRIGHT,tr(L"© xdCL — Uso gratuito para fines o entornos educativos"));

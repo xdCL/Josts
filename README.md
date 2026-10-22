@@ -1,6 +1,10 @@
-# Josts v1.1.1
+# Josts v1.2.0
 
 **Gestor de hosts para entornos educativos. Desarrollado por xdCL.**
+
+**Estado: preparación de la versión estable.** La candidata publicada es [v1.2.0 RC1](https://github.com/xdCL/Josts/releases/tag/v1.2.0-rc1). Sus pruebas automatizadas están acreditadas; el [registro de validación](docs/VALIDACION_v1.2.0.md) separa esa evidencia del alcance de terreno aún por documentar. La versión interna `1.2.0` identifica este código y no implica que ya se haya publicado una release estable.
+
+**Código fuente de RC1:** la etiqueta histórica apunta a un commit antiguo. Consulte la [fe de erratas](docs/RELEASE_v1.2.0-rc1.md#fe-de-erratas-de-trazabilidad--22-de-octubre-de-2026) y el commit `850047ebb45cc9b28a04b13e53130083036cfb35` para obtener las fuentes correspondientes al EXE publicado.
 
 **Uso gratuito para fines o entornos educativos.** Se permite compartir el ejecutable original sin modificaciones, conservando el crédito a xdCL y la licencia. Cada administrador puede adaptar sus listas de sitios. Condiciones completas en [LICENSE.txt](LICENSE.txt); [traducción al inglés](LICENSE_EN.txt). Ambas están incorporadas en **Acerca de**, por lo que sigue bastando distribuir el `.exe`. Es una licencia personalizada de uso educativo, no una licencia de software libre o de código abierto.
 
@@ -16,7 +20,7 @@ Josts abre con una **bienvenida en modo simple** que comprueba el parche de host
 
 Para considerar el parche al día, debe existir un bloque válido de Josts y una precarga válida y no vacía; deben estar presentes todos sus pares de IP/dominio, sin IP en conflicto ni dominios antiguos dentro del bloque de Josts. Se respeta la convivencia normal de `127.0.0.1 localhost` y `::1 localhost`. Una lista vacía, errores de lectura, un bloque incompleto o una precarga diferente mantienen el programa abierto. Se compara con la precarga que Josts está usando: `hosts.txt` junto al ejecutable, si existe, o la lista incorporada. El cierre de bienvenida solo se programa en la comprobación inicial, no al recargar manualmente la lista. Este estado corresponde a hosts; no certifica el estado de la política de Edge.
 
-Si falta aplicar o actualizar el parche, la bienvenida ofrece **Aplicar y cerrar automáticamente**. Un clic aplica la precarga sin una confirmación adicional, vuelve a leer `hosts` para comprobar las entradas y muestra **«¡Precarga aplicada correctamente!»** junto con una cuenta regresiva visible de **3, 2, 1 segundos**, tras la cual cierra el programa. **Mantener abierto** cancela ese cierre. Si falla la escritura o la verificación, muestra el error y permanece abierto. Las entradas ajenas con otra IP se detectan antes de aplicar; el programa pide revisarlas en modo avanzado y no inicia el temporizador.
+Si falta aplicar o actualizar el parche, la bienvenida ofrece **Aplicar y cerrar automáticamente**. Un clic aplica la precarga sin una confirmación adicional y vuelve a leer `hosts` para comprobar las entradas. Si termina sin errores ni advertencias, muestra **«¡Precarga aplicada correctamente!»** junto con una cuenta regresiva visible de **3, 2, 1 segundos**, tras la cual cierra el programa. **Mantener abierto** cancela ese cierre. Si falla la escritura o la verificación, muestra el error y permanece abierto. Un bloqueo externo equivalente con `0.0.0.0`, `127.0.0.1` o `::1` se conserva sin duplicarlo. Si hay un mapeo externo diferente, se omite únicamente ese dominio y se aplica el resto de la lista; Josts informa los conflictos y permanece abierto para revisarlos.
 
 El modo simple conserva **Aplicar lista precargada** (con confirmación y sin cierre automático) y **Quitar bloqueos de Josts**. **Modo avanzado** muestra la lista completa, el buscador, la edición, la importación, la exportación, el registro y las operaciones de restauración. Se cambia de modo con el botón de la parte superior. Las ediciones permanecen en la sesión al cambiar de vista; los botones del modo simple usan siempre la precarga leída al abrir o al usar **Recargar precarga**. Las demás operaciones sobre el `hosts` del sistema conservan sus confirmaciones.
 
@@ -78,11 +82,25 @@ Windows Sandbox usa la misma compilación de Windows que el equipo anfitrión. E
 
 ## Compartir en GitHub
 
-Consulte [COMPARTIR_EN_GITHUB.md](COMPARTIR_EN_GITHUB.md) para crear el repositorio y publicar únicamente **Josts.exe** como descarga en Releases. La carpeta `dist` contiene la aplicación portable completa. El paquete de Sandbox se conserva para pruebas locales y no se incluye en la publicación de GitHub.
+Consulte [COMPARTIR_EN_GITHUB.md](COMPARTIR_EN_GITHUB.md) para publicar el EXE y su SHA-256 desde un commit verificado. El programa sigue requiriendo únicamente el `.exe`; los archivos de comprobación son evidencia de la entrega. El paquete de Sandbox se conserva para pruebas locales.
 
-## Compilación final para Windows 10 x86 y x64
+## Compilación x86 y alcance de validación
 
-La entrega actual usa **LLVM-MinGW 20260908 (Clang 23.1.1), objetivo i686/UCRT**, con las bibliotecas de C++ y del compilador enlazadas estáticamente. Las DLL importadas pertenecen a Windows: [UCRT forma parte de Windows 10](https://learn.microsoft.com/en-us/cpp/windows/universal-crt-deployment) y [WOW64 ejecuta aplicaciones x86 en Windows x64](https://learn.microsoft.com/es-es/windows/win32/winprog64/running-32-bit-applications). No se necesita instalar Visual C++ Redistributable ni copiar DLL a los HP.
+El EXE publicado como RC1 proviene del [workflow Windows build](.github/workflows/windows-build.yml): **MSVC, Release, Win32/x86 y runtime estático `/MT`**. Su ejecución verificada usó Windows Server 2025 como anfitrión. El objetivo de uso continúa siendo Windows 10 x86/x64; el sistema del compilador no demuestra por sí solo compatibilidad en los equipos destinatarios.
+
+Desde un entorno con Visual Studio y las herramientas de C++ instaladas, el mismo flujo de compilación es:
+
+```powershell
+cmake -S . -B build -A Win32 -DJOSTS_REQUIRE_X86=ON -DJOSTS_BUILD_TESTS=ON
+cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure --no-tests=error
+```
+
+El workflow se ejecuta para las ramas configuradas, PR hacia `main`, etiquetas `v*` o mediante **Run workflow**. El artefacto `Josts-Windows-x86` incluye el EXE, `SHA256.txt`, `build-info.json` y `test-results.xml`. Las compilaciones de ramas/PR llevan sufijo `-dev`; las de etiquetas usan el nombre de la etiqueta y verifican que coincida con la versión del proyecto. `sourceCommit` identifica el commit realmente compilado; en un PR puede ser el commit de integración temporal de GitHub.
+
+### Alternativa local LLVM-MinGW
+
+El proyecto conserva el script para **LLVM-MinGW 20260908 (Clang 23.1.1), objetivo i686/UCRT**, con las bibliotecas de C++ y del compilador enlazadas estáticamente. Esta alternativa local no es la procedencia del EXE RC1 publicado. [UCRT forma parte de Windows 10](https://learn.microsoft.com/en-us/cpp/windows/universal-crt-deployment) y [WOW64 ejecuta aplicaciones x86 en Windows x64](https://learn.microsoft.com/es-es/windows/win32/winprog64/running-32-bit-applications).
 
 Para reproducir esta compilación, se requiere CMake 3.24 o posterior, Ninja y el [paquete oficial LLVM-MinGW 20260908 UCRT para anfitrión x64](https://github.com/mstorsjo/llvm-mingw/releases/tag/20260908), extraído en `tools\llvm-mingw-20260908-ucrt-x86_64`. El nombre x64 del paquete identifica al equipo compilador; el script selecciona el compilador de destino **i686/x86**. SHA256 del ZIP descargado: `1bcf74d06b724aeecaa6412ca85f5b26fb1da770e7cdcefa9263c9c5c3ad34b6`.
 
@@ -95,23 +113,15 @@ powershell -ExecutionPolicy Bypass -File .\compilar_portable.ps1
 
 El script acepta `-ToolchainRoot`, `-CMakePath` y `-NinjaPath` para instalaciones en otras rutas. Configura `build` como x86, ejecuta las pruebas con sus comprobaciones activas incluso en Release, rechaza arquitecturas o DLL inesperadas y comprueba el límite de 4 MB. Repite las pruebas en una carpeta sin `hosts.txt`, fuentes ni DLL auxiliares, con un `PATH` que solo contiene Windows. Solo después copia el resultado a **`dist\Josts.exe`** y guarda arquitectura, tamaño, SHA256 y dependencias en `build\portabilidad.json`. Los compiladores y pruebas no se distribuyen con la aplicación.
 
-Como alternativa, el proyecto conserva soporte para Visual Studio 2019, toolset v142, con el runtime estático `/MT`:
-
-```powershell
-cmake -S . -B build-msvc -G "Visual Studio 16 2019" -A Win32 -DJOSTS_REQUIRE_X86=ON -DJOSTS_BUILD_TESTS=ON
-cmake --build build-msvc --config Release
-ctest --test-dir build-msvc -C Release --output-on-failure
-```
-
 CMake fija C++14, `WINVER=0x0601` y `_WIN32_WINNT=0x0601` para mantener el código dentro de API antiguas; **el alcance de distribución es Windows 10**. La opción `JOSTS_REQUIRE_X86` rechaza por error una compilación de 64 bits destinada a la entrega portable.
 
-### Compilación verificada en esta estación
+### Evidencia de pruebas
 
-La entrega es un ejecutable nativo **PE32/i386 de menos de 4 MB**; su tamaño exacto y SHA256 quedan en `build\portabilidad.json`. Se revisaron sus importaciones y se ejecutaron las pruebas x86 en el anfitrión Windows x64 (compilación 26200.9445). Pasaron el parsing de 50.000 dominios, la escritura/restauración de archivos de prueba, la conservación de codificación y contenido ajeno, la resolución canónica de `System32\drivers\etc\hosts` bajo Windows x86/WOW64, y la carga de precarga, fuentes, iconos, manifiesto y licencias desde el `.exe`. La copia sin archivos auxiliares pasó las mismas comprobaciones.
+El [CI de RC1](https://github.com/xdCL/Josts/actions/runs/36142708345) aprobó las cuatro suites: `core`, `ui`, `edge_policy` y `privileged`. El EXE publicado es **PE32/i386**, de 1.077.248 bytes; su SHA-256 coincide con el del artefacto de esa ejecución. La suite `core` comprueba, entre otros casos, parsing de 50.000 dominios, archivos de prueba, recursos incorporados, bloqueos externos equivalentes y conflictos que no deben interrumpir el resto de la lista. Los resultados y límites están detallados en [VALIDACION_v1.2.0.md](docs/VALIDACION_v1.2.0.md).
 
 Las pruebas de interfaz usan ventanas ocultas y archivos propios: comprueban la animación mientras una lectura espera, el bloqueo de doble clic y cierre durante el trabajo, la aplicación con respaldo y lectura de verificación, los tres valores visibles del temporizador y el cierre al transcurrir 3 segundos. También comprueban **Mantener abierto**, un `hosts` de solo lectura, entradas ajenas incompatibles y una precarga inválida. La bienvenida se verifica con archivos ya parchados, antiguos, incompletos, conflictos de IP, entradas obsoletas y listas vacías o inválidas; se comprueba el cierre de 5 segundos sin escribir hosts, su cancelación y que una recarga posterior no reactive el cierre. Generan imágenes de las vistas simple, avanzada, de trabajo, éxito y error para revisar su distribución visual. **Ninguna de estas pruebas modifica el `hosts` real.** La suite `privileged` agrega el intercambio entre dos procesos mediante named pipe y simula la respuesta al lanzamiento UAC con archivos de prueba; no sustituye la validación de credenciales entre dos cuentas reales.
 
-**Límite de la verificación:** esto valida el binario x86 y su funcionamiento bajo WOW64; no equivale a haber probado todas las compilaciones de Windows 10 ni un Windows 10 x86 real. La validación de campo pendiente es abrirlo y probar aplicar/quitar bloqueos en los HP de cada arquitectura.
+**Límite de la verificación:** la release RC1 declara pruebas en terreno; aún falta registrar su alcance concreto. Las suites automatizadas no acreditan UAC real entre dos cuentas, una instalación real de Windows 10 x86 ni el comportamiento de Edge en un navegador real. Recuperar los resultados existentes y completar solo los escenarios no acreditados antes de declarar estable.
 
 ## Corrección de cuentas estándar en 1.1
 
@@ -120,9 +130,9 @@ Consulta el [diagnóstico, arquitectura, cambios antes/después y pruebas A–F]
 ## Uso para el personal
 
 1. Copie **solo `dist\Josts.exe`** a una carpeta del pendrive. Lleva la lista inicial incorporada; copie además `hosts.txt` únicamente si quiere sustituir la precarga por una lista propia. Puede añadir una carpeta `listas` con archivos `.txt` y `.md`. No copie compiladores, ZIP, archivos TTF ni DLL.
-2. Abra Josts normalmente, incluso desde una cuenta estudiante. Al aplicar o quitar cambios, Windows solicitará consentimiento o credenciales administrativas según la cuenta y las políticas del equipo. En **modo simple** verá el estado del equipo y cuántos dominios contiene la precarga. Para hacerlo en un clic, pulse **Aplicar y cerrar automáticamente**: tras verificar el éxito, se cierra en 3 segundos. Puede cancelar el cierre con **Mantener abierto**. Para aplicar sin cerrar, use **Aplicar lista precargada** y confirme. **Quitar bloqueos de Josts** retira solo el bloqueo propio.
-3. Si necesita revisar o cambiar sitios, abra **Modo avanzado**. La lista indica cada dominio como **No aplicada**, **Activa fuera de Josts**, **Aplicada por Josts**, **Modificada** o **Estado no disponible**. Use **Agregar**, **Editar** (o doble clic), **Eliminar**, el buscador y **Subir/Bajar selección**. **Cargar lista** permite varios archivos y muestra nuevas, duplicadas y errores antes de añadir o reemplazar la lista. **Exportar** guarda la lista actual.
-4. En modo avanzado, pulse **Aplicar parche** para escribir la lista editada, o **Aplicar selección** para escribir solo las filas elegidas. Confirme el cambio. Los dominios ya activos en entradas ajenas se omiten para evitar duplicados.
+2. Abra Josts normalmente, incluso desde una cuenta estudiante. Al aplicar o quitar cambios, Windows solicitará consentimiento o credenciales administrativas según la cuenta y las políticas del equipo. En **modo simple** verá el estado del equipo y cuántos dominios contiene la precarga. Para hacerlo en un clic, pulse **Aplicar y cerrar automáticamente**: tras verificar el éxito sin advertencias, se cierra en 3 segundos. Si existen conflictos externos, permanece abierto para revisarlos. Puede cancelar el cierre con **Mantener abierto**. Para aplicar sin cerrar, use **Aplicar lista precargada** y confirme. **Quitar bloqueos de Josts** retira solo el bloqueo propio.
+3. Si necesita revisar o cambiar sitios, abra **Modo avanzado**. La lista indica cada dominio como **No aplicada**, **Activa fuera de Josts** (mismo mapeo), **Bloqueada fuera de Josts** (bloqueo equivalente), **Conflicto externo**, **Aplicada por Josts**, **Modificada** o **Estado no disponible**. Use **Agregar**, **Editar** (o doble clic), **Eliminar**, el buscador y **Subir/Bajar selección**. **Cargar lista** permite varios archivos y muestra nuevas, duplicadas y errores antes de añadir o reemplazar la lista. **Exportar** guarda la lista actual.
+4. En modo avanzado, pulse **Aplicar parche** para escribir la lista editada, o **Aplicar selección** para escribir solo las filas elegidas. Confirme el cambio. Los dominios con un mapeo externo idéntico o un bloqueo equivalente se omiten para evitar duplicados. Un mapeo externo diferente se conserva, se informa como conflicto y no detiene la aplicación de los demás dominios.
 5. **Desparchear solo mis entradas** quita el bloque de Josts y conserva el resto. **Restablecer hosts** recupera el respaldo original completo y elimina también cambios ajenos; exige confirmación.
 
 Antes de la primera modificación se guarda `hosts.bak_original` junto al hosts del sistema; antes de cada cambio efectivo se verifica `hosts.bak_previous` con el estado anterior. `hosts.josts.lock` coordina las instancias. Los respaldos portables antiguos se conservan, pero no se restauran automáticamente porque podrían pertenecer a otro PC. El log rotativo está en `logs\josts.log` cuando la carpeta permite escritura (máximo aproximado de 1 MB por archivo, más una copia `.1`). Si falta el permiso administrativo, falla el respaldo o cambia hosts durante la operación, se informa y no se declara éxito. Los fallos de verificación posterior se notifican con la ubicación de recuperación.
@@ -132,7 +142,7 @@ Antes de la primera modificación se guarda `hosts.bak_original` junto al hosts 
 - **Win32 y C++14** reducen tamaño y dependencias. Las tareas de importación y escritura de hosts se ejecutan en un hilo secundario; la lista virtual evita crear 50.000 controles individuales.
 - **Tema oscuro fijo**: los controles propios se pintan con GDI y una paleta de grafito, azul y texto claro sin depender de APIs modernas de modo oscuro. La barra de título oscura se solicita de forma opcional mediante carga dinámica; Windows decide si admite y aplica ese atributo.
 - **AddFontMemResourceEx** carga DM Sans y Material Icons como recursos privados del proceso. Los botones dibujan glifos de Google Material Icons según los códigos oficiales, con texto en DM Sans. Si falla DM Sans, los controles propios usan Segoe UI; si falla Material Icons, los botones conservan sus etiquetas de texto. Ambas incidencias se registran. Los cuadros de selección de archivos pertenecen a Windows y conservan la tipografía del sistema.
-- La ruta de `hosts` se obtiene con `GetSystemDirectoryW` y se conserva como `System32\drivers\etc\hosts`. Ese subdirectorio está exento de la redirección WOW64, por lo que Josts ya no necesita exponer el alias virtual `Sysnative`. No se fija la letra de la unidad.
+- La ruta de `hosts` se construye desde `GetWindowsDirectoryW` y el subdirectorio `System32\drivers\etc\hosts`. Ese subdirectorio está exento de la redirección WOW64, por lo que Josts no necesita exponer el alias virtual `Sysnative`. No se fija la letra de la unidad. El diagnóstico distingue archivo inexistente, carpeta, reparse point/enlace y errores de acceso; la ausencia se recupera solo al aplicar explícitamente.
 - La aplicación detecta UTF-8 con y sin BOM, UTF-16 LE/BE con BOM y ANSI. Reescribe con la codificación y el salto de línea detectados. Si la página ANSI no puede representar los caracteres del bloque firmado, rechaza el cambio. Solo sustituye su bloque delimitado. Escribe un temporal aleatorio exclusivo, lo vacía a disco, verifica su contenido y reemplaza hosts con `ReplaceFileW`, conservando su seguridad. Antes compara la revisión observada; después verifica los bytes guardados. Un auxiliar privilegiado vacía la caché DNS y comunica cualquier fallo por separado.
 - El manifiesto declara compatibilidad con Windows 10 y conserva identificadores para versiones anteriores. Esto no amplía el alcance de distribución ni sustituye las pruebas en Windows 10 x86 y x64.
 

@@ -18,7 +18,7 @@ void log(const std::wstring& message) {
     LARGE_INTEGER size{}; GetFileSizeEx(file,&size);
     SYSTEMTIME time{}; GetLocalTime(&time);
     wchar_t stamp[64]; wsprintfW(stamp,L"[%04u-%02u-%02u %02u:%02u:%02u] ",time.wYear,time.wMonth,time.wDay,time.wHour,time.wMinute,time.wSecond);
-    std::wstring line=(size.QuadPart==0?tr(L"Josts v1.1.1 — desarrollado por xdCL\r\n"):L"");
+    std::wstring line=(size.QuadPart==0?tr(L"Josts v1.2.0 — desarrollado por xdCL\r\n"):L"");
     line+=stamp+message+L"\r\n";
     std::string bytes=utf8(line);
     DWORD done=0; WriteFile(file,bytes.data(),static_cast<DWORD>(bytes.size()),&done,nullptr);

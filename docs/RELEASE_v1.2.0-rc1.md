@@ -2,6 +2,18 @@
 
 **Pre-release / Release Candidate**
 
+## Fe de erratas de trazabilidad — 22 de octubre de 2026
+
+La etiqueta publicada `v1.2.0-rc1` apunta a `648d0d19f80ce7a9124a650e013c874ba9d5ce98`, cuyo árbol contiene únicamente el README antiguo. Por ello, los archivos automáticos **Source code (zip/tar.gz)** de esa release no corresponden al ejecutable RC1.
+
+El código que produjo el EXE es [`850047ebb45cc9b28a04b13e53130083036cfb35`](https://github.com/xdCL/Josts/tree/850047ebb45cc9b28a04b13e53130083036cfb35), conservado también en la rama `release/v1.2.0-rc1`. Su [ejecución de CI](https://github.com/xdCL/Josts/actions/runs/36142708345) compiló x86 con MSVC y aprobó las cuatro suites. El SHA-256 del EXE del artefacto coincide con el digest del EXE publicado:
+
+`fb6afdaa4c6bb32fc3edaee3f892ed11a85446f817aa45a75f6c2803be52f8ac`
+
+Se conserva la etiqueta histórica; esta corrección documental no reemplaza el EXE ni declara la versión estable. Las notas originales declaran pruebas en terreno, cuyo alcance detallado se registra por separado en [VALIDACION_v1.2.0.md](VALIDACION_v1.2.0.md).
+
+## Notas originales de RC1
+
 Esta versión candidata incorpora correcciones derivadas de pruebas reales en equipos Windows 10 de entorno educativo.
 
 ## Cambios principales

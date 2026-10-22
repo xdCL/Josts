@@ -14,7 +14,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show) {
         if(existing) { ShowWindow(existing,SW_RESTORE); SetForegroundWindow(existing); }
         CloseHandle(single); return 0;
     }
-    josts::log(josts::tr(L"Inicio de Josts v1.1.1 — desarrollado por xdCL."));
+    josts::log(josts::tr(L"Inicio de Josts v1.2.0 — desarrollado por xdCL."));
     josts::Fonts fonts; fonts.load(instance);
     josts::Ui ui(instance,fonts);
     int result=ui.run(show);

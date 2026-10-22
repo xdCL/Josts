@@ -1,41 +1,32 @@
-# Compartir Josts portable en GitHub
+# Publicar Josts portable en GitHub
 
-La descarga pública será únicamente **Josts.exe**, listo para usar. La lista inicial, los idiomas, las fuentes, los iconos y sus licencias están incorporados en ese archivo. El paquete de Windows Sandbox queda para las pruebas locales y no forma parte de la publicación.
+El repositorio público es [xdCL/Josts](https://github.com/xdCL/Josts). El programa se distribuye como un solo EXE x86 con precarga, idiomas, fuentes, iconos y licencias incorporados. El SHA-256 y el manifiesto de compilación sirven para verificar la entrega; no son necesarios para ejecutar Josts.
 
-Los archivos están preparados localmente; aún no se ha creado ni publicado un repositorio.
+## Preparación de v1.2.0
 
-## 1. Crear el repositorio
+1. Usar la rama `release/v1.2.0`, basada en `a8e53ca88020865e8671c874b3705b8b51aadd02`. Este commit conserva el código validado de RC1 y agrega sus notas. No iniciar desde la etiqueta histórica `v1.2.0-rc1`, que apunta al README antiguo.
+2. Integrar mediante un PR hacia `main` las correcciones de versión, documentación y empaquetado. El PR #1 de `dev/v1.1.1` queda reemplazado; sus commits ya están contenidos en esta historia.
+3. Completar [VALIDACION_v1.2.0.md](docs/VALIDACION_v1.2.0.md), recuperando los resultados de terreno existentes y probando solo los escenarios no acreditados. No publicar como estable mientras haya fallos bloqueantes o el alcance anunciado siga sin acreditar o delimitar.
+4. Tras integrar, anotar el SHA final de `main`. **Actions → Windows build → Run workflow**, sobre `main`, permite repetir la compilación si hace falta; los pushes a `main` también la ejecutan. Comprobar que el run corresponde al SHA final y que sus cuatro suites pasan.
 
-Entra con tu cuenta **xdCL**, abre [crear un repositorio](https://github.com/new), escribe **Josts** y elige **Public** para compartirlo. Activa **Add a README file** para crear la primera revisión del repositorio y pulsa **Create repository**. Si el repositorio ya existe, usa ese mismo.
+## Etiqueta y ejecutable de la misma revisión
 
-El README puede contener la descripción de abajo y un enlace a Releases. Sube también `LICENSE.txt` y `LICENSE_EN.txt` a la raíz del repositorio, mediante **Add file → Upload files**, para que las condiciones puedan consultarse antes de descargar. La única descarga de la aplicación en Releases seguirá siendo `Josts.exe`; no hace falta subir el código fuente ni la carpeta de trabajo. Usa esta licencia personalizada; no selecciones MIT, GPL u otra licencia que conceda permisos diferentes.
+1. Crear una etiqueta nueva **`v1.2.0` en el SHA final verificado**, sin reutilizar ni mover la etiqueta de RC1. Antes de publicar, comprobar que el árbol de esa etiqueta contiene `src/`, `res/`, pruebas y documentación.
+2. El push del tag ejecuta [`.github/workflows/windows-build.yml`](.github/workflows/windows-build.yml). Esperar el resultado correcto y descargar el artefacto `Josts-Windows-x86` de **ese run**, no el de otra rama.
+3. Verificar en `build-info.json` que `sourceCommit` coincide con el SHA del tag, la versión es `1.2.0` y el archivo es `Josts-v1.2.0.exe`. Comprobar el SHA-256 con `SHA256.txt` y los metadatos del EXE `1.2.0.0`. Conservar el enlace al run y `test-results.xml`.
+4. Hacer la comprobación básica del ejecutable que se distribuirá: apertura, versión visible y flujo de aplicar/quitar en el equipo de prueba. Una recompilación puede cambiar el hash; comprobar el EXE concreto, sin asumir identidad por compartir el código.
+5. Crear la release **Josts v1.2.0** usando el tag existente. Adjuntar `Josts-v1.2.0.exe`, `SHA256.txt` y `build-info.json`. Incluir cambios, SHA del código, enlace al CI y alcance real de terreno. Desmarcar **Set as a pre-release** solo cuando se cumplan los criterios del registro.
 
-## 2. Publicar Josts.exe
+Las compilaciones de ramas/PR se llaman `Josts-v1.2.0-dev.exe`; no anunciarlas como una release estable. El workflow comprueba la correspondencia entre la versión de CMake, los metadatos de Windows y la etiqueta, y no publica releases automáticamente.
 
-Para la prueba de terreno de esta corrección crea primero una **pre-release** con etiqueta **v1.1.1-rc1** y título **Josts 1.1.1 RC1**. Cuando el flujo cuenta estudiante → UAC con credenciales de otra cuenta administradora quede confirmado, publica **v1.1.1** como versión estable.
+## Registro histórico de RC1
 
-Adjunta **Josts.exe**. Si el repositorio contiene el código fuente, el workflow `.github/workflows/build-windows.yml` permite generar el ejecutable x86 desde **Actions → Build Josts Windows x86 → Run workflow** y descargar el artefacto `Josts-Windows-x86`. No adjuntes el paquete de Sandbox, las fuentes ni los archivos de pruebas. Comprueba la descripción y pulsa **Publish release**. Comparte el enlace de esa publicación para que las personas descarguen **Josts.exe**.
+La [fe de erratas](docs/RELEASE_v1.2.0-rc1.md#fe-de-erratas-de-trazabilidad--22-de-octubre-de-2026) identifica las fuentes correctas y el hash del EXE publicado. Conservar la publicación y su etiqueta históricas; enlazar la corrección en sus notas. Los archivos automáticos de fuentes de esa etiqueta antigua no representan RC1.
 
-GitHub puede mostrar también sus archivos automáticos de código del repositorio; la descarga utilizable del programa es **Josts.exe**.
+## Distribución y licencia
 
-Guías oficiales: [crear un repositorio](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository), [publicar Releases y adjuntar binarios](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository).
+Compartir el enlace público de la release permite descargar el EXE sin acceder a los artefactos de Actions. No adjuntar compiladores, fuentes TTF sueltas ni paquetes de Sandbox como si fueran dependencias de la aplicación.
 
-## Descripción para el README y la publicación
+**Uso gratuito para fines o entornos educativos.** Se permite compartir el ejecutable original sin modificaciones, conservando el crédito a xdCL y su licencia. Los administradores pueden adaptar sus listas. Consultar [LICENSE.txt](LICENSE.txt), su [traducción al inglés](LICENSE_EN.txt) o **Acerca de**. Es una licencia personalizada de uso educativo; no presentarla como una licencia de software libre o de código abierto. Las licencias de terceros conservan sus permisos originales.
 
-Josts es un gestor portable de hosts para entornos educativos, desarrollado por xdCL.
-
-**Uso gratuito para fines o entornos educativos.** Puedes utilizarlo y compartir el ejecutable original sin modificarlo, conservando el crédito a xdCL y sus condiciones. Puedes adaptar tus listas de sitios bloqueados. Consulta `LICENSE.txt` o **Acerca de** dentro de Josts para leer la licencia completa.
-
-- Un solo ejecutable x86, dirigido a Windows 10 de 32 y 64 bits.
-- Lista de dominios incorporada y respaldo antes de modificar hosts.
-- Modo simple y avanzado, con tema oscuro y Google Material Icons.
-- Español (Chile) por defecto y cambio a inglés.
-- Botón para desactivar el contenido de noticias de la nueva pestaña de Edge.
-- Bienvenida con el estado del parche: si ya está al día, informa que no hace falta cambiar nada y se cierra en 5 segundos, con opción de mantener abierto.
-- Aplicación en un clic, verificación y cierre automático en 3 segundos.
-
-Descarga **Josts.exe** desde Releases, guárdalo en una carpeta o pendrive y ábrelo normalmente; Windows solicitará permisos de administrador al aplicar cambios. No necesita instalador ni archivos adicionales para distribuirlo. Durante el uso puede guardar su lista editable y registros junto al EXE; los respaldos se guardan junto al hosts del equipo.
-
-El ejecutable todavía no tiene firma digital. La compilación x86 y las pruebas locales pasaron en Windows x64; falta validar en terreno las distintas instalaciones de Windows 10 de los equipos destinatarios. Las licencias de DM Sans, Material Icons y LLVM-MinGW están disponibles dentro del programa, en **Acerca de**.
-
-La licencia propia no cambia los permisos de los componentes de terceros. Los repositorios públicos permiten ver y copiar el repositorio mediante las funciones de GitHub, según sus términos; no se debe presentar esta licencia como código abierto. [Guía de licencias de GitHub](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+El EXE continúa sin firma digital. Abrirlo normalmente; Windows solicita UAC al aplicar cambios. Los respaldos de hosts se conservan junto al archivo del equipo y los registros se guardan junto al EXE cuando la carpeta permite escritura.

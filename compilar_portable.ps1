@@ -84,7 +84,7 @@ try {
         edgePolicyTestsPassed = $true
         privilegedBrokerTestsPassed = $true
         executionLevel = 'asInvoker'
-        version = '1.1.1'
+        version = '1.2.0'
         embeddedResourcesWithoutSidecarsPassed = $true
         hostIs64Bit = [Environment]::Is64BitOperatingSystem
         limitation = 'La prueba local no certifica todas las compilaciones de Windows 10 ni sustituye una prueba en Windows 10 x86 real.'

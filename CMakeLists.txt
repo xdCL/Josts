@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Josts VERSION 1.1.1 LANGUAGES CXX RC)
+project(Josts VERSION 1.2.0 LANGUAGES CXX RC)
 option(JOSTS_REQUIRE_X86 "Exigir el ejecutable portable de 32 bits" OFF)
 if(JOSTS_REQUIRE_X86 AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "La entrega portable debe compilarse como x86 (32 bits).")
