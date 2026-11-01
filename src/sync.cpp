@@ -110,11 +110,11 @@ bool install_sync(std::wstring& error) {
     return true;
 }
 
-bool elevate_install(bool remove,DWORD& exit_code) {
+bool elevate_install(HWND owner,bool remove,DWORD& exit_code) {
     const std::wstring exe=module_path();
     if(exe.empty()) return false;
     const std::wstring args=remove?L"--remove-sync-admin":L"--install-sync-admin";
-    SHELLEXECUTEINFOW launch{}; launch.cbSize=sizeof(launch);
+    SHELLEXECUTEINFOW launch{}; launch.cbSize=sizeof(launch); launch.hwnd=owner;
     launch.fMask=SEE_MASK_NOCLOSEPROCESS|SEE_MASK_NOASYNC|SEE_MASK_FLAG_NO_UI;
     launch.lpVerb=L"runas"; launch.lpFile=exe.c_str(); launch.lpParameters=args.c_str(); launch.nShow=SW_SHOWNORMAL;
     if(!ShellExecuteExW(&launch)) return false;
@@ -342,6 +342,27 @@ bool command_line(std::vector<std::wstring>& args) {
 }
 }
 
+bool request_sync_install(HWND owner,DWORD& exit_code,std::wstring& error) {
+    exit_code=ERROR_SUCCESS;
+    if(token_elevated()) {
+        const bool ok=install_sync(error);
+        exit_code=ok?ERROR_SUCCESS:ERROR_INSTALL_FAILURE;
+        return ok;
+    }
+    DWORD child=ERROR_CANCELLED;
+    if(!elevate_install(owner,false,child)) {
+        const DWORD code=GetLastError();
+        error=code==ERROR_CANCELLED?L"Activación cancelada.":L"No se pudo solicitar elevación para Josts Sync: "+error_message(code);
+        exit_code=code; return false;
+    }
+    exit_code=child;
+    if(child!=ERROR_SUCCESS) {
+        error=L"Josts Sync no pudo completar la instalación. Código "+std::to_wstring(child)+L".";
+        return false;
+    }
+    return true;
+}
+
 bool sync_entry(int& exit_code) {
     std::vector<std::wstring> args;
     if(!command_line(args)||args.size()<2) return false;
@@ -357,7 +378,7 @@ bool sync_entry(int& exit_code) {
             return true;
         }
         DWORD child=ERROR_CANCELLED;
-        if(!elevate_install(false,child)) {
+        if(!elevate_install(nullptr,false,child)) {
             log(L"[SYNC] No se pudo solicitar elevación para instalar Josts Sync: "+error_message(GetLastError()));
             exit_code=GetLastError(); return true;
         }
@@ -376,7 +397,7 @@ bool sync_entry(int& exit_code) {
             exit_code=ok?0:ERROR_INSTALL_FAILURE; return true;
         }
         DWORD child=ERROR_CANCELLED;
-        if(!elevate_install(true,child)) { exit_code=GetLastError(); return true; }
+        if(!elevate_install(nullptr,true,child)) { exit_code=GetLastError(); return true; }
         exit_code=static_cast<int>(child); return true;
     }
     if(command==L"--remove-sync-admin") {
