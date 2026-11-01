@@ -263,7 +263,7 @@ int sync_now() {
         std::wstring cache_error;
         if(apply_cache(root,cache_error)) return 0;
         if(!cache_error.empty()) log(L"[SYNC] Caché no utilizable: "+cache_error);
-        return ERROR_INTERNET_CANNOT_CONNECT;
+        return ERROR_WINHTTP_CANNOT_CONNECT;
     }
 
     SyncManifest manifest;
@@ -274,14 +274,18 @@ int sync_now() {
 
     std::string current;
     if(cached_version(root,current)&&current==manifest.version) {
-        log(L"[SYNC] Batería al día ("+std::wstring(manifest.version.begin(),manifest.version.end())+L").");
-        return 0;
+        std::wstring cache_error;
+        if(apply_cache(root,cache_error)) {
+            log(L"[SYNC] Batería al día ("+std::wstring(manifest.version.begin(),manifest.version.end())+L"); estado local verificado.");
+            return 0;
+        }
+        if(!cache_error.empty()) log(L"[SYNC] No se pudo verificar la caché actual: "+cache_error);
     }
 
     std::string pack;
     if(!https_get(SyncPackPath,pack,MaxPack,error)) {
         log(L"[SYNC] "+error);
-        return ERROR_INTERNET_CANNOT_CONNECT;
+        return ERROR_WINHTTP_CANNOT_CONNECT;
     }
     std::string digest;
     try { digest=sha256(pack); }
