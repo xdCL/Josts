@@ -1,0 +1,42 @@
+name: Refresh Josts Sync manifest
+
+on:
+  push:
+    branches: [ "sync-data" ]
+    paths:
+      - "sync/hosts-pack.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sync data
+        uses: actions/checkout@v4
+        with:
+          ref: sync-data
+
+      - name: Rebuild manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          HASH="$(sha256sum sync/hosts-pack.txt | awk '{print $1}')"
+          VERSION="$GITHUB_SHA"
+          printf '{"schema":1,"version":"%s","sha256":"%s"}\n' "$VERSION" "$HASH" > sync/manifest.json
+
+      - name: Commit manifest when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- sync/manifest.json; then
+            echo "Manifest already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sync/manifest.json
+          git commit -m "sync: refresh manifest"
+          git push origin HEAD:sync-data
