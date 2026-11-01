@@ -13,19 +13,32 @@ permissions:
 jobs:
   manifest:
     runs-on: ubuntu-latest
+    env:
+      JOSTS_SYNC_SIGNING_KEY: ${{ secrets.JOSTS_SYNC_SIGNING_KEY }}
     steps:
       - name: Checkout sync data
         uses: actions/checkout@v4
         with:
           ref: sync-data
 
-      - name: Rebuild manifest
+      - name: Rebuild and sign manifest
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "${JOSTS_SYNC_SIGNING_KEY:-}" ]; then
+            echo "Missing repository secret JOSTS_SYNC_SIGNING_KEY." >&2
+            exit 1
+          fi
+
           HASH="$(sha256sum sync/hosts-pack.txt | awk '{print $1}')"
           VERSION="$GITHUB_SHA"
-          printf '{"schema":1,"version":"%s","sha256":"%s"}\n' "$VERSION" "$HASH" > sync/manifest.json
+          printf 'JOSTS-SYNC-1\n%s\n%s\n' "$VERSION" "$HASH" > sync/signing-payload.txt
+          printf '%s\n' "$JOSTS_SYNC_SIGNING_KEY" > sync/signing-key.pem
+          chmod 600 sync/signing-key.pem
+          openssl dgst -sha256 -sign sync/signing-key.pem -out sync/signature.bin sync/signing-payload.txt
+          SIGNATURE="$(base64 -w0 sync/signature.bin)"
+          printf '{"schema":1,"version":"%s","sha256":"%s","signature":"%s"}\n' "$VERSION" "$HASH" "$SIGNATURE" > sync/manifest.json
+          rm -f sync/signing-key.pem sync/signing-payload.txt sync/signature.bin
 
       - name: Commit manifest when changed
         shell: bash
@@ -38,5 +51,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sync/manifest.json
-          git commit -m "sync: refresh manifest"
+          git commit -m "sync: refresh signed manifest"
           git push origin HEAD:sync-data
