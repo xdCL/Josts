@@ -3,6 +3,7 @@
 #include "hosts_manager.h"
 #include "parser.h"
 #include "privileged_ops.h"
+#include "sync_signature.h"
 #include <windows.h>
 #include <winhttp.h>
 #include <shellapi.h>
@@ -24,6 +25,7 @@ struct SyncManifest {
     int schema=0;
     std::string version;
     std::string sha;
+    std::string signature;
 };
 
 std::wstring module_path() {
@@ -205,6 +207,7 @@ bool parse_manifest(const std::string& bytes,SyncManifest& manifest) {
     if(manifest.version.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")!=std::string::npos) return false;
     if(!json_string(bytes,"sha256",manifest.sha)||manifest.sha.size()!=64||
        manifest.sha.find_first_not_of("0123456789abcdef")!=std::string::npos) return false;
+    if(!json_string(bytes,"signature",manifest.signature)||manifest.signature.size()<300||manifest.signature.size()>400) return false;
     return true;
 }
 
@@ -314,6 +317,10 @@ int sync_now() {
     if(digest!=manifest.sha) {
         log(L"[SYNC] SHA-256 remoto no coincide; batería rechazada.");
         return ERROR_CRC;
+    }
+    if(!verify_sync_signature(manifest.version,manifest.sha,manifest.signature)) {
+        log(L"[SYNC] Firma criptográfica inválida; batería rechazada.");
+        return ERROR_INVALID_SIGNATURE;
     }
 
     std::vector<Entry> entries;
