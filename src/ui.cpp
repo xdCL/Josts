@@ -12,7 +12,7 @@
 
 namespace josts {
 static void dark_caption_when_supported(HWND window);
-enum { ID_LIST=1001,ID_SEARCH,ID_APPLY,ID_RESTORE,ID_UNPATCH,ID_IMPORT,ID_ADD,ID_RELOAD,ID_EXPORT,ID_EDIT,ID_DELETE,ID_UP,ID_DOWN,ID_APPLY_SELECTED,ID_ABOUT,ID_HEADER,ID_MODE,ID_SIMPLE_APPLY,ID_SIMPLE_UNPATCH,ID_QUICK_APPLY,ID_KEEP_OPEN,ID_PROGRESS,ID_LANGUAGE,ID_EDGE_NEWS };
+enum { ID_LIST=1001,ID_SEARCH,ID_APPLY,ID_RESTORE,ID_UNPATCH,ID_IMPORT,ID_ADD,ID_RELOAD,ID_EXPORT,ID_EDIT,ID_DELETE,ID_UP,ID_DOWN,ID_APPLY_SELECTED,ID_ABOUT,ID_HEADER,ID_MODE,ID_SIMPLE_APPLY,ID_SIMPLE_UNPATCH,ID_QUICK_APPLY,ID_KEEP_OPEN,ID_PROGRESS,ID_LANGUAGE,ID_EDGE_NEWS,ID_SYNC };
 static const std::pair<int,const wchar_t*> button_labels[]={
         {ID_APPLY,L"Aplicar parche"},{ID_APPLY_SELECTED,L"Aplicar selección"},{ID_RESTORE,L"Restablecer hosts"},
         {ID_UNPATCH,L"Desparchear solo mis entradas"},{ID_IMPORT,L"Cargar lista (.txt / .md)"},
@@ -43,6 +43,7 @@ static wchar_t material_glyph(int id) {
         case ID_EXPORT: return 0xe2c4;           // file_download
         case ID_ABOUT: return 0xe88f;            // info_outline
         case ID_EDGE_NEWS: return 0xe0e5;        // rss_feed
+        case ID_SYNC: return 0xe627;             // sync
         case ID_LANGUAGE: return 0xe894;         // language
         case ID_MODE: return 0xe8ef;             // view_list
         default: return 0;
@@ -157,7 +158,7 @@ static INT_PTR CALLBACK about_dialog(HWND h,UINT msg,WPARAM w,LPARAM l) {
         SetWindowTextW(h,tr(L"Acerca de Josts"));
         SetDlgItemTextW(h,IDC_ABOUT_TAGLINE,tr(L"No entenderás su utilidad hasta que lo uses"));
         SetDlgItemTextW(h,IDOK,tr(L"Cerrar"));
-        SetDlgItemTextW(h,IDC_ABOUT_TITLE,tr(L"Josts v1.1.1 — Gestor de hosts para entornos educativos"));
+        SetDlgItemTextW(h,IDC_ABOUT_TITLE,tr(L"Josts v1.3.0 — Gestor de hosts para entornos educativos"));
         SetDlgItemTextW(h,IDC_ABOUT_AUTHOR,tr(L"Desarrollado por xdCL"));
         SetDlgItemTextW(h,IDC_ABOUT_FONT,tr(L"Tipografía: DM Sans (Google Fonts, SIL Open Font License 1.1)"));
         SetDlgItemTextW(h,IDC_ABOUT_COPYRIGHT,tr(L"© xdCL — Uso gratuito para fines o entornos educativos"));
@@ -249,6 +250,7 @@ void Ui::create_controls() {
     language_button_=control(instance_,window_,L"BUTTON",L"English",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_OWNERDRAW,0,ID_LANGUAGE);
     about_button_=control(instance_,window_,L"BUTTON",tr(L"Acerca de"),WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_OWNERDRAW,0,ID_ABOUT);
     edge_button_=control(instance_,window_,L"BUTTON",tr(L"Quitar noticias de Edge"),WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_OWNERDRAW,0,ID_EDGE_NEWS);
+    sync_button_=control(instance_,window_,L"BUTTON",tr(L"Activar Josts Sync"),WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_OWNERDRAW,0,ID_SYNC);
     tagline_=control(instance_,window_,L"STATIC",tr(L"No entenderás su utilidad hasta que lo uses"),WS_CHILD|WS_VISIBLE,0,0);
     simple_heading_=control(instance_,window_,L"STATIC",tr(L"Aplicar la lista precargada"),WS_CHILD|WS_VISIBLE,0,0);
     simple_description_=control(instance_,window_,L"STATIC",tr(L"Bloquea en este equipo los dominios incluidos en Josts. Se guardará un respaldo antes de hacer cambios."),WS_CHILD|WS_VISIBLE,0,0);
@@ -274,7 +276,7 @@ void Ui::create_controls() {
     for(int i=0;i<3;i++) { LVCOLUMNW c{}; c.mask=LVCF_TEXT|LVCF_WIDTH|LVCF_SUBITEM; c.pszText=const_cast<LPWSTR>(names[i]); c.cx=widths[i]; c.iSubItem=i; ListView_InsertColumn(list_,i,&c); }
     for(const auto& item:button_labels) buttons_.push_back(control(instance_,window_,L"BUTTON",tr(item.second),WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_OWNERDRAW,0,item.first));
     console_=control(instance_,window_,L"EDIT",L"",WS_CHILD|WS_VISIBLE|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL,0,0);
-    for(HWND c:{status_,admin_,search_,list_,console_,about_button_,mode_button_,language_button_,edge_button_,tagline_,simple_description_,simple_hint_,simple_footer_,simple_apply_,simple_unpatch_,quick_apply_,keep_open_,progress_text_}) SendMessageW(c,WM_SETFONT,(WPARAM)regular_,TRUE);
+    for(HWND c:{status_,admin_,search_,list_,console_,about_button_,mode_button_,language_button_,edge_button_,sync_button_,tagline_,simple_description_,simple_hint_,simple_footer_,simple_apply_,simple_unpatch_,quick_apply_,keep_open_,progress_text_}) SendMessageW(c,WM_SETFONT,(WPARAM)regular_,TRUE);
     for(HWND c:{brand_,simple_heading_}) SendMessageW(c,WM_SETFONT,(WPARAM)title_,TRUE);
     SendMessageW(simple_count_,WM_SETFONT,(WPARAM)bold_,TRUE);
     SendMessageW(header_,WM_SETFONT,(WPARAM)bold_,TRUE);
@@ -297,8 +299,9 @@ void Ui::layout() {
     MoveWindow(language_button_,w-504,13,168,30,TRUE);
     MoveWindow(mode_button_,w-320,13,176,30,TRUE);
     MoveWindow(about_button_,w-130,13,114,30,TRUE);
-    MoveWindow(edge_button_,16,64,260,32,TRUE);
-    MoveWindow(tagline_,296,72,w-312,24,TRUE);
+    MoveWindow(edge_button_,16,64,240,32,TRUE);
+    MoveWindow(sync_button_,268,64,240,32,TRUE);
+    MoveWindow(tagline_,528,72,w-544,24,TRUE);
     MoveWindow(progress_text_,16,h-56,w-32,28,TRUE);
     MoveWindow(progress_,16,h-22,w-32,8,TRUE);
     if(!advanced_) {
@@ -343,6 +346,7 @@ void Ui::toggle_language() {
     SetWindowTextW(language_button_,language()==Language::SpanishChile?L"English":L"Español (Chile)");
     SetWindowTextW(about_button_,tr(L"Acerca de"));
     SetWindowTextW(edge_button_,tr(L"Quitar noticias de Edge"));
+    SetWindowTextW(sync_button_,tr(L"Activar Josts Sync"));
     SetWindowTextW(tagline_,tr(L"No entenderás su utilidad hasta que lo uses"));
     SetWindowTextW(admin_,elevated_?tr(L"Admin: activo"):tr(L"Admin: al aplicar"));
     SetWindowTextW(simple_description_,tr(L"Bloquea en este equipo los dominios incluidos en Josts. Se guardará un respaldo antes de hacer cambios."));
@@ -713,6 +717,22 @@ void Ui::block_edge_news() {
         result.ok=outcome.ok; result.message=outcome.message; result.warning=outcome.warning;
     });
 }
+void Ui::install_sync() {
+    const wchar_t* question=tr(L"Josts Sync instalará una copia protegida de Josts en ProgramData y comprobará cada 60 minutos si existe una batería oficial más nueva. ¿Activarlo en este equipo?");
+    if(notice(window_,question,tr(L"Activar Josts Sync"),MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)!=IDYES) return;
+    DWORD code=ERROR_SUCCESS; std::wstring error;
+    SetWindowTextW(progress_text_,tr(L"Activando Josts Sync…"));
+    const bool ok=request_sync_install(window_,code,error);
+    if(ok) {
+        const std::wstring message=tr(L"Josts Sync quedó activado. La batería se comprobará cada 60 minutos y las actualizaciones válidas se aplicarán silenciosamente.");
+        report(message); SetWindowTextW(progress_text_,message.c_str());
+        notice(window_,message.c_str(),L"Josts Sync",MB_OK|MB_ICONINFORMATION);
+    } else {
+        if(error.empty()) error=tr(L"No se pudo activar Josts Sync.");
+        report(L"Josts Sync: "+error); SetWindowTextW(progress_text_,error.c_str());
+        notice(window_,error.c_str(),L"Josts Sync",MB_OK|MB_ICONERROR);
+    }
+}
 void Ui::about() { AboutData data{regular_,icons_,instance_}; DialogBoxParamW(instance_,MAKEINTRESOURCEW(IDD_ABOUT),window_,about_dialog,(LPARAM)&data); }
 int Ui::notice(HWND owner,const wchar_t* message,const wchar_t* title,UINT flags) { return dark_message(instance_,regular_,icons_,owner,message,title,flags); }
 void Ui::set_busy(bool busy) {
@@ -978,6 +998,7 @@ LRESULT Ui::handle(UINT msg,WPARAM w,LPARAM l) {
             case ID_EDIT: add_or_edit(true); return 0; case ID_DELETE: remove_selected(); return 0;
             case ID_UP: move_selected(-1); return 0; case ID_DOWN: move_selected(1); return 0;
             case ID_EDGE_NEWS: block_edge_news(); return 0;
+            case ID_SYNC: install_sync(); return 0;
             case ID_LANGUAGE: toggle_language(); return 0;
             case ID_ABOUT: about(); return 0; case ID_MODE: if(!busy_) { welcome_=false; set_mode(!advanced_); } return 0;
         }
