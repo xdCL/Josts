@@ -6,6 +6,7 @@
 #include <functional>
 #include <thread>
 #include "privileged_ops.h"
+#include "sync.h"
 
 namespace josts {
 struct ActionResult;
@@ -40,6 +41,7 @@ private:
     void remove_own();
     void restore();
     void block_edge_news();
+    void install_sync();
     void about();
     int notice(HWND owner,const wchar_t* message,const wchar_t* title,UINT flags);
     void set_busy(bool busy);
@@ -56,7 +58,7 @@ private:
     HWND window_=nullptr,list_=nullptr,search_=nullptr,console_=nullptr,status_=nullptr,admin_=nullptr;
     HWND brand_=nullptr,header_=nullptr,about_button_=nullptr,mode_button_=nullptr;
     HWND language_button_=nullptr;
-    HWND edge_button_=nullptr,tagline_=nullptr;
+    HWND edge_button_=nullptr,sync_button_=nullptr,tagline_=nullptr;
     std::function<bool()> edge_action_=BloquearContenidoNoticiasEdge;
     std::function<PrivilegedResult(HWND,const PrivilegedRequest&)> privileged_action_=request_privileged;
     FILETIME hosts_write_time_{};
