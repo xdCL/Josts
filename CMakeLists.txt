@@ -35,7 +35,7 @@ set_property(SOURCE res/josts.rc APPEND PROPERTY OBJECT_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/res/DM_Sans/DMSans-Bold.ttf"
   "${CMAKE_CURRENT_SOURCE_DIR}/res/DM_Sans/DMSans-Italic.ttf")
 add_executable(Josts WIN32
-  src/main.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp
+  src/main.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp src/sync_signature.cpp
   src/font_loader.cpp src/common.cpp src/i18n.cpp src/log.cpp res/josts.rc)
 target_include_directories(Josts PRIVATE src res)
 target_link_libraries(Josts PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32 winhttp)
@@ -67,7 +67,7 @@ if(JOSTS_BUILD_TESTS)
   endif()
   add_test(NAME core COMMAND josts_core_tests)
   add_executable(josts_ui_tests tests/ui_tests.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp
-    src/common.cpp src/i18n.cpp src/log.cpp src/font_loader.cpp res/josts.rc)
+    src/common.cpp src/i18n.cpp src/log.cpp src/font_loader.cpp src/sync_signature.cpp res/josts.rc)
   target_compile_definitions(josts_ui_tests PRIVATE JOSTS_UI_TESTS)
   target_include_directories(josts_ui_tests PRIVATE src res)
   target_link_libraries(josts_ui_tests PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32 winhttp)
@@ -104,4 +104,15 @@ if(JOSTS_BUILD_TESTS)
   endif()
   add_test(NAME privileged COMMAND josts_privileged_tests)
   set_tests_properties(privileged PROPERTIES TIMEOUT 90)
+  add_executable(josts_sync_signature_tests tests/sync_signature_tests.cpp src/sync_signature.cpp)
+  target_include_directories(josts_sync_signature_tests PRIVATE src)
+  target_link_libraries(josts_sync_signature_tests PRIVATE bcrypt)
+  if(MSVC)
+    set_property(TARGET josts_sync_signature_tests PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    target_compile_options(josts_sync_signature_tests PRIVATE /W4 /utf-8 /EHsc /UNDEBUG)
+  elseif(MINGW)
+    target_compile_options(josts_sync_signature_tests PRIVATE -Wall -Wextra -UNDEBUG)
+    target_link_options(josts_sync_signature_tests PRIVATE -static -static-libgcc -static-libstdc++)
+  endif()
+  add_test(NAME sync_signature COMMAND josts_sync_signature_tests)
 endif()
