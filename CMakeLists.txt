@@ -66,11 +66,11 @@ if(JOSTS_BUILD_TESTS)
     target_link_options(josts_core_tests PRIVATE -static -static-libgcc -static-libstdc++)
   endif()
   add_test(NAME core COMMAND josts_core_tests)
-  add_executable(josts_ui_tests tests/ui_tests.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp
+  add_executable(josts_ui_tests tests/ui_tests.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp
     src/common.cpp src/i18n.cpp src/log.cpp src/font_loader.cpp res/josts.rc)
   target_compile_definitions(josts_ui_tests PRIVATE JOSTS_UI_TESTS)
   target_include_directories(josts_ui_tests PRIVATE src res)
-  target_link_libraries(josts_ui_tests PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32)
+  target_link_libraries(josts_ui_tests PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32 winhttp)
   if(MSVC)
     set_property(TARGET josts_ui_tests PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     target_compile_options(josts_ui_tests PRIVATE /W4 /utf-8 /EHsc /UNDEBUG)
