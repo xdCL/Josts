@@ -320,7 +320,7 @@ int sync_now() {
     }
     if(!verify_sync_signature(manifest.version,manifest.sha,manifest.signature)) {
         log(L"[SYNC] Firma criptográfica inválida; batería rechazada.");
-        return ERROR_INVALID_SIGNATURE;
+        return ERROR_INVALID_DATA;
     }
 
     std::vector<Entry> entries;
