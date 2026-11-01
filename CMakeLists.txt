@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Josts VERSION 1.1.1 LANGUAGES CXX RC)
+project(Josts VERSION 1.3.0 LANGUAGES CXX RC)
 option(JOSTS_REQUIRE_X86 "Exigir el ejecutable portable de 32 bits" OFF)
 if(JOSTS_REQUIRE_X86 AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "La entrega portable debe compilarse como x86 (32 bits).")
@@ -35,10 +35,10 @@ set_property(SOURCE res/josts.rc APPEND PROPERTY OBJECT_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/res/DM_Sans/DMSans-Bold.ttf"
   "${CMAKE_CURRENT_SOURCE_DIR}/res/DM_Sans/DMSans-Italic.ttf")
 add_executable(Josts WIN32
-  src/main.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp
+  src/main.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp
   src/font_loader.cpp src/common.cpp src/i18n.cpp src/log.cpp res/josts.rc)
 target_include_directories(Josts PRIVATE src res)
-target_link_libraries(Josts PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32)
+target_link_libraries(Josts PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32 winhttp)
 add_custom_command(TARGET Josts POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/hosts.txt" "$<TARGET_FILE_DIR:Josts>/hosts.txt"
