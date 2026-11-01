@@ -42,16 +42,18 @@ std::wstring sync_root() {
     return join(path,L"Josts");
 }
 
-bool set_protected_acl(const std::wstring& path,std::wstring& error) {
+bool set_protected_acl(const std::wstring& path,std::wstring& error,bool directory=true) {
     PSECURITY_DESCRIPTOR descriptor=nullptr;
-    const wchar_t* sddl=L"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;GRGX;;;BU)";
+    const wchar_t* sddl=directory?
+        L"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;GRGX;;;BU)":
+        L"D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;GRGX;;;BU)";
     if(!ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl,SDDL_REVISION_1,&descriptor,nullptr)) {
         error=L"No se pudo preparar la ACL de Josts Sync: "+error_message(GetLastError()); return false;
     }
     const BOOL ok=SetFileSecurityW(path.c_str(),DACL_SECURITY_INFORMATION,descriptor);
     DWORD code=ok?ERROR_SUCCESS:GetLastError();
     LocalFree(descriptor);
-    if(!ok) { error=L"No se pudo proteger la carpeta de Josts Sync: "+error_message(code); return false; }
+    if(!ok) { error=L"No se pudo proteger Josts Sync: "+error_message(code); return false; }
     return true;
 }
 
@@ -95,7 +97,15 @@ bool install_sync(std::wstring& error) {
             error=L"No se pudo instalar Josts Sync en ProgramData: "+error_message(GetLastError()); return false;
         }
     }
+    if(!set_protected_acl(target,error,false)) return false;
     if(!schedule_sync(target,error)) return false;
+
+    // Run one sync immediately. A transient network error does not invalidate the installation:
+    // the scheduled task will retry automatically on its next cycle.
+    DWORD first_sync=0;
+    std::wstring command=L"\""+target+L"\" --sync --silent";
+    if(!run_process(target,command,first_sync)||first_sync!=0)
+        log(L"[SYNC] Instalación completada; la primera sincronización no pudo confirmarse y se reintentará automáticamente.");
     log(L"[SYNC] Josts Sync instalado. Tarea programada: cada 60 minutos.");
     return true;
 }
@@ -208,6 +218,16 @@ bool parse_pack(const std::string& bytes,std::vector<Entry>& entries,std::wstrin
     entries=std::move(parsed.entries); return true;
 }
 
+void flush_dns_after_sync() {
+    wchar_t system[MAX_PATH]={}; UINT n=GetSystemDirectoryW(system,MAX_PATH);
+    if(!n||n>=MAX_PATH) { log(L"[SYNC] Hosts actualizado; no se pudo localizar ipconfig.exe para vaciar DNS."); return; }
+    const std::wstring ipconfig=join(system,L"ipconfig.exe");
+    std::wstring command=L"\""+ipconfig+L"\" /flushdns";
+    DWORD code=0;
+    if(!run_process(ipconfig,command,code)||code!=0)
+        log(L"[SYNC] Hosts actualizado; no se pudo confirmar el vaciado de la caché DNS.");
+}
+
 bool apply_entries(const std::vector<Entry>& entries,std::wstring& warning,std::wstring& error) {
     HostsManager manager;
     Snapshot snapshot;
@@ -215,6 +235,7 @@ bool apply_entries(const std::vector<Entry>& entries,std::wstring& warning,std::
     std::wstring apply_message;
     if(!manager.apply(entries,apply_message,snapshot.revision)) { error=apply_message; return false; }
     warning=apply_message;
+    flush_dns_after_sync();
     return true;
 }
 
