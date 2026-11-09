@@ -265,6 +265,12 @@
 127.0.0.1       minecraft.softonic.com
 127.0.0.1       minecraft.en.softonic.com
 
+# --- Minecraft en navegador y buscadores de servidores ---
+127.0.0.1       findmcserver.com
+127.0.0.1       www.findmcserver.com
+127.0.0.1       eaglercraft.com
+127.0.0.1       www.eaglercraft.com
+
 # --- Lanzador no oficial de Minecraft y espejos de TLauncher ---
 127.0.0.1       tlauncher.org
 127.0.0.1       www.tlauncher.org
