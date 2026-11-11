@@ -1,0 +1,51 @@
+name: Publish v1.3.0 dev preview
+
+on:
+  push:
+    branches: [ "dev/v1.3.0" ]
+    paths:
+      - ".github/workflows/publish-v1.3-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure MSVC x86
+        shell: pwsh
+        run: |
+          cmake -S . -B build -A Win32 -DJOSTS_REQUIRE_X86=ON -DJOSTS_BUILD_TESTS=ON
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C Release --output-on-failure
+
+      - name: Stage preview
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          $candidates = @("build/Release/Josts.exe", "build/Josts.exe")
+          $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw "No se encontró Josts.exe después de compilar." }
+          Copy-Item $exe "release/Josts-v1.3.0-dev.exe"
+          $hash = (Get-FileHash "release/Josts-v1.3.0-dev.exe" -Algorithm SHA256).Hash.ToLower()
+          "$hash  Josts-v1.3.0-dev.exe" | Set-Content -Encoding ascii "release/SHA256.txt"
+
+      - name: Publish temporary pre-release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v1.3.0-dev-preview" "release/Josts-v1.3.0-dev.exe#Josts v1.3.0-dev" "release/SHA256.txt#SHA-256" --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Josts v1.3.0-dev · prueba temporal" --notes "Versión pública temporal para prueba de terreno de Josts Sync. No es una versión estable. Incluye sincronización silenciosa, batería remota firmada y activación mediante UAC." --prerelease
