@@ -1,0 +1,25 @@
+Josts — Educational use and unmodified distribution license
+Version 1.0 — September 14, 2026
+© 2026 xdCL
+
+1. Scope
+These terms apply to Josts-specific elements for which xdCL holds the relevant rights. Josts is offered free of charge for educational purposes or for use in educational environments, including administration of their computers, networks and laboratories. Public and private institutions are included; administrators do not need to work as volunteers.
+
+2. Authorized use
+You may download, copy and run Josts without paying a license fee, provided that the use serves educational purposes or takes place in educational environments. Uses outside this scope require authorization from xdCL.
+
+3. Distribution of the original program
+You may share the original, unmodified executable free of charge for the authorized uses. You must preserve attribution to xdCL, these terms, and the embedded notices and licenses. You may not claim authorship of Josts or remove or replace its credits. Sharing the complete executable preserves the license available in About; no separate accompanying file is required.
+
+4. No program modifications
+This license does not grant permission to alter Josts-specific source code or the executable, or to create or distribute modified or derivative versions of the program. These activities require authorization from xdCL, except for rights that applicable law allows you to exercise without such authorization.
+
+5. Lists and configuration
+The restriction above does not prevent using Josts features or adapting, importing, exporting or sharing domain lists and your own data files. Each administrator may adapt hosts.txt and their lists to the educational context, apply or remove blocks, and use the program's configuration options. These actions are not considered software modifications under this license.
+
+6. Third-party components and retained rights
+DM Sans, Material Icons, LLVM-MinGW components and other third-party elements retain their own licenses and notices. This license does not restrict the permissions their owners grant for those components or rights that cannot be restricted by law. Their texts are embedded in About and are also preserved in the project's license files.
+
+Rights in Josts-specific elements not expressly granted are reserved to xdCL. This is a custom educational use license; it is not a free software or open source license.
+
+The Spanish text is the reference version. This English version is provided as an informational translation.

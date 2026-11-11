@@ -1,0 +1,23 @@
+# Compiladores, compilaciones y entregas locales
+/tools/
+/build*/
+/dist/
+/entregas/
+/Josts_fuentes*.zip
+/Josts_Sandbox.zip
+/SHA256SUMS.txt
+
+# Datos del equipo y de las pruebas
+**/logs/
+**/backups/
+*.bak
+*.bak_original
+*.tmp
+/sandbox/Josts_Sandbox.wsb
+/sandbox/Josts.exe
+
+# Entorno local
+/.codex/
+/.agents/
+/.vs/
+*.user
