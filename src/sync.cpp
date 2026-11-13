@@ -283,10 +283,9 @@ int sync_now() {
 
     std::string manifest_bytes; std::wstring error;
     if(!https_get(SyncManifestPath,manifest_bytes,MaxManifest,error)) {
+        // Keep the currently applied hosts block untouched. A resident check must
+        // never rewrite hosts merely because the network is unavailable.
         log(L"[SYNC] "+error);
-        std::wstring cache_error;
-        if(apply_cache(root,cache_error)) return 0;
-        if(!cache_error.empty()) log(L"[SYNC] Caché no utilizable: "+cache_error);
         return ERROR_WINHTTP_CANNOT_CONNECT;
     }
 
@@ -298,12 +297,8 @@ int sync_now() {
 
     std::string current;
     if(cached_version(root,current)&&current==manifest.version) {
-        std::wstring cache_error;
-        if(apply_cache(root,cache_error)) {
-            log(L"[SYNC] Batería al día ("+std::wstring(manifest.version.begin(),manifest.version.end())+L"); estado local verificado.");
-            return 0;
-        }
-        if(!cache_error.empty()) log(L"[SYNC] No se pudo verificar la caché actual: "+cache_error);
+        // No version change: no hosts rewrite, no DNS flush and no noisy success log.
+        return 0;
     }
 
     std::string pack;
@@ -348,6 +343,8 @@ bool command_line(std::vector<std::wstring>& args) {
     LocalFree(argv); return true;
 }
 }
+
+int sync_run_once() { return sync_now(); }
 
 bool request_sync_install(HWND owner,DWORD& exit_code,std::wstring& error) {
     exit_code=ERROR_SUCCESS;
