@@ -2,7 +2,7 @@ name: Windows build
 
 on:
   push:
-    branches: [ "dev/v1.1.1", "dev/v1.2.0", "dev/v1.3.0" ]
+    branches: [ "dev/v1.1.1", "dev/v1.2.0", "dev/v1.3.0", "feature/v1.3-resident" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
