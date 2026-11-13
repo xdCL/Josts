@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "privileged_ops.h"
 #include "sync_signature.h"
+#include "resident.h"
 #include <windows.h>
 #include <winhttp.h>
 #include <shellapi.h>
@@ -283,10 +284,9 @@ int sync_now() {
 
     std::string manifest_bytes; std::wstring error;
     if(!https_get(SyncManifestPath,manifest_bytes,MaxManifest,error)) {
+        // Keep the currently applied hosts block untouched. A resident check must
+        // never rewrite hosts merely because the network is unavailable.
         log(L"[SYNC] "+error);
-        std::wstring cache_error;
-        if(apply_cache(root,cache_error)) return 0;
-        if(!cache_error.empty()) log(L"[SYNC] Caché no utilizable: "+cache_error);
         return ERROR_WINHTTP_CANNOT_CONNECT;
     }
 
@@ -298,12 +298,8 @@ int sync_now() {
 
     std::string current;
     if(cached_version(root,current)&&current==manifest.version) {
-        std::wstring cache_error;
-        if(apply_cache(root,cache_error)) {
-            log(L"[SYNC] Batería al día ("+std::wstring(manifest.version.begin(),manifest.version.end())+L"); estado local verificado.");
-            return 0;
-        }
-        if(!cache_error.empty()) log(L"[SYNC] No se pudo verificar la caché actual: "+cache_error);
+        // No version change: no hosts rewrite, no DNS flush and no noisy success log.
+        return 0;
     }
 
     std::string pack;
@@ -349,25 +345,11 @@ bool command_line(std::vector<std::wstring>& args) {
 }
 }
 
+int sync_run_once() { return sync_now(); }
+
 bool request_sync_install(HWND owner,DWORD& exit_code,std::wstring& error) {
-    exit_code=ERROR_SUCCESS;
-    if(token_elevated()) {
-        const bool ok=install_sync(error);
-        exit_code=ok?ERROR_SUCCESS:ERROR_INSTALL_FAILURE;
-        return ok;
-    }
-    DWORD child=ERROR_CANCELLED;
-    if(!elevate_install(owner,false,child)) {
-        const DWORD code=GetLastError();
-        error=code==ERROR_CANCELLED?L"Activación cancelada.":L"No se pudo solicitar elevación para Josts Sync: "+error_message(code);
-        exit_code=code; return false;
-    }
-    exit_code=child;
-    if(child!=ERROR_SUCCESS) {
-        error=L"Josts Sync no pudo completar la instalación. Código "+std::to_wstring(child)+L".";
-        return false;
-    }
-    return true;
+    // Backward-compatible API: all new v1.3 installations use the protected resident service.
+    return request_resident_install(owner,exit_code,error);
 }
 
 bool sync_entry(int& exit_code) {
@@ -378,39 +360,18 @@ bool sync_entry(int& exit_code) {
         exit_code=sync_now(); return true;
     }
     if(command==L"--install-sync") {
-        if(token_elevated()) {
-            std::wstring error; const bool ok=install_sync(error);
-            if(!ok) log(L"[SYNC] Instalación fallida: "+error);
-            exit_code=ok?0:ERROR_INSTALL_FAILURE;
-            return true;
-        }
-        DWORD child=ERROR_CANCELLED;
-        if(!elevate_install(nullptr,false,child)) {
-            log(L"[SYNC] No se pudo solicitar elevación para instalar Josts Sync: "+error_message(GetLastError()));
-            exit_code=GetLastError(); return true;
-        }
-        exit_code=static_cast<int>(child); return true;
-    }
-    if(command==L"--install-sync-admin") {
-        std::wstring error; const bool ok=install_sync(error);
-        if(!ok) log(L"[SYNC] Instalación fallida: "+error);
-        exit_code=ok?0:ERROR_INSTALL_FAILURE;
+        std::wstring error; DWORD code=ERROR_SUCCESS;
+        const bool ok=request_resident_install(nullptr,code,error);
+        if(!ok) log(L"[RESIDENT] Instalación compatible fallida: "+error);
+        exit_code=ok?ERROR_SUCCESS:static_cast<int>(code);
         return true;
     }
     if(command==L"--remove-sync") {
-        if(token_elevated()) {
-            std::wstring error; const bool ok=remove_sync(error);
-            if(!ok) log(L"[SYNC] Desinstalación fallida: "+error);
-            exit_code=ok?0:ERROR_INSTALL_FAILURE; return true;
-        }
-        DWORD child=ERROR_CANCELLED;
-        if(!elevate_install(nullptr,true,child)) { exit_code=GetLastError(); return true; }
-        exit_code=static_cast<int>(child); return true;
-    }
-    if(command==L"--remove-sync-admin") {
-        std::wstring error; const bool ok=remove_sync(error);
-        if(!ok) log(L"[SYNC] Desinstalación fallida: "+error);
-        exit_code=ok?0:ERROR_INSTALL_FAILURE; return true;
+        std::wstring error; DWORD code=ERROR_SUCCESS;
+        const bool ok=request_resident_remove(nullptr,code,error);
+        if(!ok) log(L"[RESIDENT] Desinstalación compatible fallida: "+error);
+        exit_code=ok?ERROR_SUCCESS:static_cast<int>(code);
+        return true;
     }
     return false;
 }

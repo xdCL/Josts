@@ -2,12 +2,14 @@
 #include "common.h"
 #include "privileged_ops.h"
 #include "sync.h"
+#include "resident.h"
 
 // Aplicación Josts — desarrollada por xdCL.
 int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show) {
     // Command-line maintenance modes and the one-shot elevated helper run before the UI mutex.
     int command_result=0;
     try {
+        if(josts::resident_entry(command_result)) return command_result;
         if(josts::sync_entry(command_result)) return command_result;
         if(josts::privileged_entry(command_result)) return command_result;
     }
