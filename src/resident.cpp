@@ -321,7 +321,7 @@ void set_status(DWORD state,DWORD win32=NO_ERROR,DWORD wait_hint=0) {
     SetServiceStatus(service_handle,&service_status);
 }
 
-DWORD WINAPI service_handler(DWORD control,DWORD,DWORD,LPVOID) {
+DWORD WINAPI service_handler(DWORD control,DWORD,LPVOID,LPVOID) {
     if(control==SERVICE_CONTROL_STOP||control==SERVICE_CONTROL_SHUTDOWN) {
         set_status(SERVICE_STOP_PENDING,NO_ERROR,10000);
         if(stop_event) SetEvent(stop_event);
