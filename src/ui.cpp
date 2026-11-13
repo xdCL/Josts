@@ -12,13 +12,14 @@
 
 namespace josts {
 static void dark_caption_when_supported(HWND window);
-enum { ID_LIST=1001,ID_SEARCH,ID_APPLY,ID_RESTORE,ID_UNPATCH,ID_IMPORT,ID_ADD,ID_RELOAD,ID_EXPORT,ID_EDIT,ID_DELETE,ID_UP,ID_DOWN,ID_APPLY_SELECTED,ID_ABOUT,ID_HEADER,ID_MODE,ID_SIMPLE_APPLY,ID_SIMPLE_UNPATCH,ID_QUICK_APPLY,ID_KEEP_OPEN,ID_PROGRESS,ID_LANGUAGE,ID_EDGE_NEWS,ID_SYNC };
+enum { ID_LIST=1001,ID_SEARCH,ID_APPLY,ID_RESTORE,ID_UNPATCH,ID_IMPORT,ID_ADD,ID_RELOAD,ID_EXPORT,ID_EDIT,ID_DELETE,ID_UP,ID_DOWN,ID_APPLY_SELECTED,ID_ABOUT,ID_HEADER,ID_MODE,ID_SIMPLE_APPLY,ID_SIMPLE_UNPATCH,ID_QUICK_APPLY,ID_KEEP_OPEN,ID_PROGRESS,ID_LANGUAGE,ID_EDGE_NEWS,ID_SYNC,ID_RESIDENT_STOP,ID_RESIDENT_REMOVE };
 static const std::pair<int,const wchar_t*> button_labels[]={
         {ID_APPLY,L"Aplicar parche"},{ID_APPLY_SELECTED,L"Aplicar selección"},{ID_RESTORE,L"Restablecer hosts"},
         {ID_UNPATCH,L"Desparchear solo mis entradas"},{ID_IMPORT,L"Cargar lista (.txt / .md)"},
         {ID_ADD,L"Agregar entrada manual"},{ID_EDIT,L"Editar"},{ID_DELETE,L"Eliminar"},
         {ID_UP,L"Subir selección"},{ID_DOWN,L"Bajar selección"},
-        {ID_RELOAD,L"Recargar precarga (hosts.txt)"},{ID_EXPORT,L"Exportar lista actual"}};
+        {ID_RELOAD,L"Recargar precarga (hosts.txt)"},{ID_EXPORT,L"Exportar lista actual"},
+        {ID_RESIDENT_STOP,L"Detener residente Josts Sync"},{ID_RESIDENT_REMOVE,L"Desinstalar Josts Sync"}};
 enum { ACTION_APPLY,ACTION_UNPATCH,ACTION_RESTORE,ACTION_IMPORT,ACTION_EXPORT,ACTION_PRELOAD,ACTION_EDGE_NEWS,ACTION_REFRESH };
 enum { STAGE_READING,STAGE_WRITING,STAGE_VERIFYING };
 static const UINT WM_ACTION_DONE=WM_APP+1,WM_ACTION_STAGE=WM_APP+2;
@@ -44,6 +45,8 @@ static wchar_t material_glyph(int id) {
         case ID_ABOUT: return 0xe88f;            // info_outline
         case ID_EDGE_NEWS: return 0xe0e5;        // rss_feed
         case ID_SYNC: return 0xe627;             // sync
+        case ID_RESIDENT_STOP: return 0xe047;    // stop
+        case ID_RESIDENT_REMOVE: return 0xe872;  // delete
         case ID_LANGUAGE: return 0xe894;         // language
         case ID_MODE: return 0xe8ef;             // view_list
         default: return 0;
@@ -287,6 +290,7 @@ void Ui::create_controls() {
     if(!elevated_) report(tr(L"Puedes revisar el estado sin privilegios. Al aplicar un cambio, Windows solicitará permisos de administrador."));
     report(tr(L"Archivo hosts del sistema: ")+hosts_.path());
     SetTimer(window_,TIMER_HOSTS,2000,nullptr);
+    refresh_resident_status();
     load_preload();
 }
 void Ui::layout() {
@@ -346,7 +350,7 @@ void Ui::toggle_language() {
     SetWindowTextW(language_button_,language()==Language::SpanishChile?L"English":L"Español (Chile)");
     SetWindowTextW(about_button_,tr(L"Acerca de"));
     SetWindowTextW(edge_button_,tr(L"Quitar noticias de Edge"));
-    SetWindowTextW(sync_button_,tr(L"Activar Josts Sync"));
+    refresh_resident_status();
     SetWindowTextW(tagline_,tr(L"No entenderás su utilidad hasta que lo uses"));
     SetWindowTextW(admin_,elevated_?tr(L"Admin: activo"):tr(L"Admin: al aplicar"));
     SetWindowTextW(simple_description_,tr(L"Bloquea en este equipo los dominios incluidos en Josts. Se guardará un respaldo antes de hacer cambios."));
@@ -717,21 +721,56 @@ void Ui::block_edge_news() {
         result.ok=outcome.ok; result.message=outcome.message; result.warning=outcome.warning;
     });
 }
+void Ui::refresh_resident_status() {
+    if(!sync_button_) return;
+    const ResidentState state=resident_state();
+    const wchar_t* label=state==ResidentState::Running?tr(L"Josts Sync: residente activo"):
+                         state==ResidentState::Stopped?tr(L"Josts Sync: residente detenido"):
+                         tr(L"Activar Josts Sync");
+    SetWindowTextW(sync_button_,label);
+}
 void Ui::install_sync() {
-    const wchar_t* question=tr(L"Josts Sync instalará una copia protegida de Josts en ProgramData y comprobará cada 60 minutos si existe una batería oficial más nueva. ¿Activarlo en este equipo?");
+    const ResidentState current=resident_state();
+    if(current==ResidentState::Running) {
+        notice(window_,tr(L"Josts Sync ya está activo como servicio residente. Para detenerlo o desinstalarlo usa el modo avanzado; Windows solicitará autorización administrativa."),L"Josts Sync",MB_OK|MB_ICONINFORMATION);
+        return;
+    }
+    const wchar_t* question=tr(L"Josts Sync instalará un residente de bajo consumo como servicio de Windows. Revisará cada 5 minutos si existe una batería oficial más nueva y sólo modificará hosts cuando la versión cambie. ¿Activarlo en este equipo?");
     if(notice(window_,question,tr(L"Activar Josts Sync"),MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)!=IDYES) return;
     DWORD code=ERROR_SUCCESS; std::wstring error;
     SetWindowTextW(progress_text_,tr(L"Activando Josts Sync…"));
-    const bool ok=request_sync_install(window_,code,error);
+    const bool ok=request_resident_install(window_,code,error);
     if(ok) {
-        const std::wstring message=tr(L"Josts Sync quedó activado. La batería se comprobará cada 60 minutos y las actualizaciones válidas se aplicarán silenciosamente.");
-        report(message); SetWindowTextW(progress_text_,message.c_str());
+        const std::wstring message=tr(L"Josts Sync quedó activo como residente. Comprobará la batería cada 5 minutos con consumo mínimo y sólo aplicará cambios cuando exista una versión nueva.");
+        report(message); SetWindowTextW(progress_text_,message.c_str()); refresh_resident_status();
         notice(window_,message.c_str(),L"Josts Sync",MB_OK|MB_ICONINFORMATION);
     } else {
         if(error.empty()) error=tr(L"No se pudo activar Josts Sync.");
-        report(L"Josts Sync: "+error); SetWindowTextW(progress_text_,error.c_str());
+        report(L"Josts Sync: "+error); SetWindowTextW(progress_text_,error.c_str()); refresh_resident_status();
         notice(window_,error.c_str(),L"Josts Sync",MB_OK|MB_ICONERROR);
     }
+}
+void Ui::stop_resident() {
+    if(resident_state()!=ResidentState::Running) {
+        notice(window_,tr(L"Josts Resident no está ejecutándose."),L"Josts Sync",MB_OK|MB_ICONINFORMATION); refresh_resident_status(); return;
+    }
+    if(notice(window_,tr(L"Detener Josts Resident suspenderá la sincronización automática hasta que vuelva a iniciarse o reinicies el equipo. Esta operación requiere autorización administrativa. ¿Continuar?"),tr(L"Detener residente"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES) return;
+    DWORD code=ERROR_SUCCESS; std::wstring error;
+    const bool ok=request_resident_stop(window_,code,error);
+    const std::wstring message=ok?tr(L"Josts Resident fue detenido."):(!error.empty()?error:tr(L"No se pudo detener Josts Resident."));
+    report(message); SetWindowTextW(progress_text_,message.c_str()); refresh_resident_status();
+    notice(window_,message.c_str(),L"Josts Sync",MB_OK|(ok?MB_ICONINFORMATION:MB_ICONERROR));
+}
+void Ui::remove_resident() {
+    if(resident_state()==ResidentState::NotInstalled) {
+        notice(window_,tr(L"Josts Resident no está instalado."),L"Josts Sync",MB_OK|MB_ICONINFORMATION); refresh_resident_status(); return;
+    }
+    if(notice(window_,tr(L"Desinstalar Josts Sync detendrá y eliminará el servicio residente y su copia protegida. Los bloqueos ya aplicados en hosts se conservarán hasta que los retires desde Josts. Esta operación requiere autorización administrativa. ¿Continuar?"),tr(L"Desinstalar Josts Sync"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES) return;
+    DWORD code=ERROR_SUCCESS; std::wstring error;
+    const bool ok=request_resident_remove(window_,code,error);
+    const std::wstring message=ok?tr(L"Josts Resident fue desinstalado."):(!error.empty()?error:tr(L"No se pudo desinstalar Josts Resident."));
+    report(message); SetWindowTextW(progress_text_,message.c_str()); refresh_resident_status();
+    notice(window_,message.c_str(),L"Josts Sync",MB_OK|(ok?MB_ICONINFORMATION:MB_ICONERROR));
 }
 void Ui::about() { AboutData data{regular_,icons_,instance_}; DialogBoxParamW(instance_,MAKEINTRESOURCEW(IDD_ABOUT),window_,about_dialog,(LPARAM)&data); }
 int Ui::notice(HWND owner,const wchar_t* message,const wchar_t* title,UINT flags) { return dark_message(instance_,regular_,icons_,owner,message,title,flags); }
@@ -739,7 +778,7 @@ void Ui::set_busy(bool busy) {
     busy_=busy;
     const bool enabled=!busy&&!close_at_;
     for(HWND button:buttons_) EnableWindow(button,enabled);
-    EnableWindow(edge_button_,enabled); EnableWindow(language_button_,enabled); EnableWindow(mode_button_,enabled); EnableWindow(about_button_,enabled);
+    EnableWindow(edge_button_,enabled); EnableWindow(sync_button_,enabled); EnableWindow(language_button_,enabled); EnableWindow(mode_button_,enabled); EnableWindow(about_button_,enabled);
     EnableWindow(list_,enabled); EnableWindow(search_,enabled);
     update_simple_view();
 }
@@ -999,6 +1038,8 @@ LRESULT Ui::handle(UINT msg,WPARAM w,LPARAM l) {
             case ID_UP: move_selected(-1); return 0; case ID_DOWN: move_selected(1); return 0;
             case ID_EDGE_NEWS: block_edge_news(); return 0;
             case ID_SYNC: install_sync(); return 0;
+            case ID_RESIDENT_STOP: stop_resident(); return 0;
+            case ID_RESIDENT_REMOVE: remove_resident(); return 0;
             case ID_LANGUAGE: toggle_language(); return 0;
             case ID_ABOUT: about(); return 0; case ID_MODE: if(!busy_) { welcome_=false; set_mode(!advanced_); } return 0;
         }
