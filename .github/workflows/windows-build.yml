@@ -45,6 +45,7 @@ jobs:
           $branch = if ("${{ github.event_name }}" -eq "pull_request") { "${{ github.head_ref }}" } else { "${{ github.ref_name }}" }
           $name = switch ($branch) {
             "dev/v1.3.0" { "Josts-v1.3.0-dev.exe" }
+            "feature/v1.3-resident" { "Josts-v1.3.0-resident-dev.exe" }
             "dev/v1.2.0" { "Josts-v1.2.0-dev.exe" }
             default { "Josts-v1.1.1-rc.exe" }
           }
