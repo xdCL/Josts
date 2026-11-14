@@ -7,6 +7,7 @@
 #include <thread>
 #include "privileged_ops.h"
 #include "sync.h"
+#include "resident.h"
 
 namespace josts {
 struct ActionResult;
@@ -42,6 +43,9 @@ private:
     void restore();
     void block_edge_news();
     void install_sync();
+    void stop_resident();
+    void remove_resident();
+    void refresh_resident_status();
     void about();
     int notice(HWND owner,const wchar_t* message,const wchar_t* title,UINT flags);
     void set_busy(bool busy);

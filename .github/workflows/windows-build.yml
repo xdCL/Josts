@@ -2,7 +2,7 @@ name: Windows build
 
 on:
   push:
-    branches: [ "dev/v1.1.1", "dev/v1.2.0", "dev/v1.3.0" ]
+    branches: [ "dev/v1.1.1", "dev/v1.2.0", "dev/v1.3.0", "feature/v1.3-resident" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -45,6 +45,7 @@ jobs:
           $branch = if ("${{ github.event_name }}" -eq "pull_request") { "${{ github.head_ref }}" } else { "${{ github.ref_name }}" }
           $name = switch ($branch) {
             "dev/v1.3.0" { "Josts-v1.3.0-dev.exe" }
+            "feature/v1.3-resident" { "Josts-v1.3.0-resident-dev.exe" }
             "dev/v1.2.0" { "Josts-v1.2.0-dev.exe" }
             default { "Josts-v1.1.1-rc.exe" }
           }

@@ -35,7 +35,7 @@ set_property(SOURCE res/josts.rc APPEND PROPERTY OBJECT_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/res/DM_Sans/DMSans-Bold.ttf"
   "${CMAKE_CURRENT_SOURCE_DIR}/res/DM_Sans/DMSans-Italic.ttf")
 add_executable(Josts WIN32
-  src/main.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp src/sync_signature.cpp
+  src/main.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp src/sync_signature.cpp src/resident.cpp
   src/font_loader.cpp src/common.cpp src/i18n.cpp src/log.cpp res/josts.rc)
 target_include_directories(Josts PRIVATE src res)
 target_link_libraries(Josts PRIVATE comctl32 comdlg32 gdi32 shell32 ws2_32 advapi32 bcrypt ole32 winhttp)
@@ -66,7 +66,7 @@ if(JOSTS_BUILD_TESTS)
     target_link_options(josts_core_tests PRIVATE -static -static-libgcc -static-libstdc++)
   endif()
   add_test(NAME core COMMAND josts_core_tests)
-  add_executable(josts_ui_tests tests/ui_tests.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp
+  add_executable(josts_ui_tests tests/ui_tests.cpp src/ui.cpp src/privileged_ops.cpp src/edge_settings.cpp src/hosts_manager.cpp src/parser.cpp src/sync.cpp src/resident.cpp
     src/common.cpp src/i18n.cpp src/log.cpp src/font_loader.cpp src/sync_signature.cpp res/josts.rc)
   target_compile_definitions(josts_ui_tests PRIVATE JOSTS_UI_TESTS)
   target_include_directories(josts_ui_tests PRIVATE src res)
