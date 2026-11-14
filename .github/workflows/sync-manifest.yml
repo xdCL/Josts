@@ -1,10 +1,6 @@
 name: Refresh Josts Sync blocklist
 
 on:
-  push:
-    branches: [ "sync-data" ]
-    paths:
-      - "sync/domains.txt"
   workflow_dispatch:
 
 permissions:
