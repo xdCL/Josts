@@ -2,6 +2,7 @@
 #include "common.h"
 #include "privileged_ops.h"
 #include "sync.h"
+#include "hosts_manager.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -32,6 +33,75 @@ std::wstring install_root() {
     wchar_t path[MAX_PATH]={};
     if(SHGetFolderPathW(nullptr,CSIDL_COMMON_APPDATA,nullptr,SHGFP_TYPE_CURRENT,path)!=S_OK) return L"";
     return join(path,L"Josts");
+}
+
+bool set_reg_string(HKEY key,const wchar_t* name,const std::wstring& value) {
+    return RegSetValueExW(key,name,0,REG_SZ,
+        reinterpret_cast<const BYTE*>(value.c_str()),
+        static_cast<DWORD>((value.size()+1)*sizeof(wchar_t)))==ERROR_SUCCESS;
+}
+
+void register_uninstall_entry(const std::wstring& target) {
+    HKEY key=nullptr;
+    if(RegCreateKeyExW(HKEY_LOCAL_MACHINE,
+        L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Josts",
+        0,nullptr,0,KEY_SET_VALUE,nullptr,&key,nullptr)!=ERROR_SUCCESS) return;
+    const std::wstring uninstall=L"\""+target+L"\" --remove-resident";
+    set_reg_string(key,L"DisplayName",L"Josts");
+    set_reg_string(key,L"DisplayVersion",L"1.3.0");
+    set_reg_string(key,L"Publisher",L"xdCL");
+    set_reg_string(key,L"DisplayIcon",L"\""+target+L"\"");
+    set_reg_string(key,L"UninstallString",uninstall);
+    DWORD one=1;
+    RegSetValueExW(key,L"NoModify",0,REG_DWORD,reinterpret_cast<const BYTE*>(&one),sizeof(one));
+    RegSetValueExW(key,L"NoRepair",0,REG_DWORD,reinterpret_cast<const BYTE*>(&one),sizeof(one));
+    RegCloseKey(key);
+}
+
+void unregister_uninstall_entry() {
+    RegDeleteTreeW(HKEY_LOCAL_MACHINE,L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Josts");
+}
+
+void flush_dns_after_uninstall() {
+    wchar_t system[MAX_PATH]={};
+    UINT n=GetSystemDirectoryW(system,MAX_PATH);
+    if(!n||n>=MAX_PATH) return;
+    const std::wstring ipconfig=join(system,L"ipconfig.exe");
+    DWORD ignored=0;
+    run_hidden(ipconfig,L"\""+ipconfig+L"\" /flushdns",ignored);
+}
+
+bool remove_managed_hosts_block(std::wstring& error) {
+    HostsManager manager;
+    Snapshot snapshot;
+    if(!manager.snapshot(snapshot,error)) return false;
+    if(snapshot.state!=HostsState::Patched) return true;
+    std::wstring remove_error;
+    if(!manager.remove_own(remove_error,snapshot.revision)) {
+        error=L"No se pudo retirar el bloque administrado por Josts de hosts: "+remove_error;
+        return false;
+    }
+    flush_dns_after_uninstall();
+    return true;
+}
+
+void cleanup_program_data(const std::wstring& root,const std::wstring& current_module) {
+    const wchar_t* files[]={
+        L"hosts-pack.cache",L"sync-state.txt",L"josts-sync.log",L"Josts.exe"
+    };
+    for(const wchar_t* name:files) {
+        const std::wstring path=join(root,name);
+        if(lower(path)==lower(current_module)) {
+            MoveFileExW(path.c_str(),nullptr,MOVEFILE_DELAY_UNTIL_REBOOT);
+            continue;
+        }
+        if(!DeleteFileW(path.c_str())) {
+            const DWORD code=GetLastError();
+            if(code!=ERROR_FILE_NOT_FOUND) MoveFileExW(path.c_str(),nullptr,MOVEFILE_DELAY_UNTIL_REBOOT);
+        }
+    }
+    if(!RemoveDirectoryW(root.c_str()))
+        MoveFileExW(root.c_str(),nullptr,MOVEFILE_DELAY_UNTIL_REBOOT);
 }
 
 bool protect_path(const std::wstring& path,bool directory,std::wstring& error) {
@@ -231,15 +301,20 @@ bool install_service_admin(std::wstring& error) {
     CloseServiceHandle(service);
     CloseServiceHandle(scm);
     remove_legacy_task();
+    register_uninstall_entry(target);
     log(L"[RESIDENT] Josts Resident instalado e iniciado. Intervalo: 5 minutos.");
     return true;
 }
 
 bool remove_service_admin(std::wstring& error) {
     if(!token_elevated()) {
-        error=L"Se requieren permisos administrativos para desinstalar Josts Resident.";
+        error=L"Se requieren permisos administrativos para desinstalar Josts.";
         return false;
     }
+
+    // A clean uninstall removes only the block owned by Josts. External hosts
+    // entries are intentionally preserved.
+    if(!remove_managed_hosts_block(error)) return false;
 
     SC_HANDLE scm=OpenSCManagerW(nullptr,nullptr,SC_MANAGER_CONNECT);
     if(!scm) { error=L"No se pudo abrir el Administrador de servicios: "+error_message(GetLastError()); return false; }
@@ -268,16 +343,12 @@ bool remove_service_admin(std::wstring& error) {
     }
 
     remove_legacy_task();
+    unregister_uninstall_entry();
 
-    const std::wstring target=join(install_root(),L"Josts.exe");
-    if(!target.empty()&&lower(module_path())!=lower(target)) {
-        if(!DeleteFileW(target.c_str())&&GetLastError()!=ERROR_FILE_NOT_FOUND)
-            MoveFileExW(target.c_str(),nullptr,MOVEFILE_DELAY_UNTIL_REBOOT);
-    } else if(!target.empty()) {
-        MoveFileExW(target.c_str(),nullptr,MOVEFILE_DELAY_UNTIL_REBOOT);
-    }
+    const std::wstring root=install_root();
+    cleanup_program_data(root,module_path());
 
-    log(L"[RESIDENT] Josts Resident desinstalado mediante operación administrativa.");
+    log(L"[RESIDENT] Josts fue desinstalado limpiamente; se retiró su bloque de hosts y se conservaron entradas externas.");
     return true;
 }
 
