@@ -35,6 +35,8 @@ std::wstring install_root() {
     return join(path,L"Josts");
 }
 
+bool run_hidden(const std::wstring& exe,std::wstring command,DWORD& exit_code);
+
 bool set_reg_string(HKEY key,const wchar_t* name,const std::wstring& value) {
     return RegSetValueExW(key,name,0,REG_SZ,
         reinterpret_cast<const BYTE*>(value.c_str()),
