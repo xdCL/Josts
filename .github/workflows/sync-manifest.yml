@@ -1,17 +1,17 @@
-name: Refresh Josts Sync manifest
+name: Refresh Josts Sync blocklist
 
 on:
   push:
     branches: [ "sync-data" ]
     paths:
-      - "sync/hosts-pack.txt"
+      - "sync/domains.txt"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  manifest:
+  blocklist:
     runs-on: ubuntu-latest
     env:
       JOSTS_SYNC_SIGNING_KEY: ${{ secrets.JOSTS_SYNC_SIGNING_KEY }}
@@ -21,12 +21,75 @@ jobs:
         with:
           ref: sync-data
 
+      - name: Build hosts pack from simple domain list
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          import re, sys
+
+          source = Path("sync/domains.txt")
+          target = Path("sync/hosts-pack.txt")
+
+          domain_re = re.compile(
+              r"^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$",
+              re.I,
+          )
+
+          seen = set()
+          generated = [
+              "# Josts Sync — batería oficial generada automáticamente",
+              "# NO EDITAR ESTE ARCHIVO. Edita sync/domains.txt.",
+              "",
+          ]
+
+          errors = []
+          for number, raw in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
+              stripped = raw.strip()
+              if not stripped:
+                  generated.append("")
+                  continue
+              if stripped.startswith("#"):
+                  generated.append(raw.rstrip())
+                  continue
+
+              value = stripped.split("#", 1)[0].strip()
+              if not value:
+                  continue
+
+              if "://" in value:
+                  host = urlsplit(value).hostname or ""
+              else:
+                  host = value.split("/", 1)[0].split(":", 1)[0]
+
+              host = host.strip().lower().rstrip(".")
+              if host.startswith("*."):
+                  errors.append(f"línea {number}: hosts no admite comodines: {host}")
+                  continue
+              if not domain_re.fullmatch(host):
+                  errors.append(f"línea {number}: dominio no válido: {value}")
+                  continue
+              if host in seen:
+                  continue
+              seen.add(host)
+              generated.append(f"127.0.0.1       {host}")
+
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(2)
+
+          target.write_text("\n".join(generated).rstrip() + "\n", encoding="utf-8")
+          print(f"Dominios únicos generados: {len(seen)}")
+          PY
+
       - name: Rebuild and sign manifest
         shell: bash
         run: |
           set -euo pipefail
           if [ -z "${JOSTS_SYNC_SIGNING_KEY:-}" ]; then
-            echo "Missing repository secret JOSTS_SYNC_SIGNING_KEY." >&2
+            echo "Falta configurar una sola vez el secret JOSTS_SYNC_SIGNING_KEY en GitHub." >&2
             exit 1
           fi
 
@@ -40,16 +103,16 @@ jobs:
           printf '{"schema":1,"version":"%s","sha256":"%s","signature":"%s"}\n' "$VERSION" "$HASH" "$SIGNATURE" > sync/manifest.json
           rm -f sync/signing-key.pem sync/signing-payload.txt sync/signature.bin
 
-      - name: Commit manifest when changed
+      - name: Commit generated blocklist
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- sync/manifest.json; then
-            echo "Manifest already current."
+          if git diff --quiet -- sync/hosts-pack.txt sync/manifest.json; then
+            echo "La batería ya está actualizada."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sync/manifest.json
-          git commit -m "sync: refresh signed manifest"
+          git add sync/hosts-pack.txt sync/manifest.json
+          git commit -m "sync: publish signed domain changes"
           git push origin HEAD:sync-data
