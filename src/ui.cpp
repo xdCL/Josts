@@ -19,7 +19,7 @@ static const std::pair<int,const wchar_t*> button_labels[]={
         {ID_ADD,L"Agregar entrada manual"},{ID_EDIT,L"Editar"},{ID_DELETE,L"Eliminar"},
         {ID_UP,L"Subir selección"},{ID_DOWN,L"Bajar selección"},
         {ID_RELOAD,L"Recargar precarga (hosts.txt)"},{ID_EXPORT,L"Exportar lista actual"},
-        {ID_RESIDENT_STOP,L"Detener residente Josts Sync"},{ID_RESIDENT_REMOVE,L"Desinstalar Josts Sync"}};
+        {ID_RESIDENT_STOP,L"Detener residente Josts Sync"},{ID_RESIDENT_REMOVE,L"Desinstalar Josts de este equipo"}};
 enum { ACTION_APPLY,ACTION_UNPATCH,ACTION_RESTORE,ACTION_IMPORT,ACTION_EXPORT,ACTION_PRELOAD,ACTION_EDGE_NEWS,ACTION_REFRESH };
 enum { STAGE_READING,STAGE_WRITING,STAGE_VERIFYING };
 static const UINT WM_ACTION_DONE=WM_APP+1,WM_ACTION_STAGE=WM_APP+2;
@@ -763,14 +763,14 @@ void Ui::stop_resident() {
 }
 void Ui::remove_resident() {
     if(resident_state()==ResidentState::NotInstalled) {
-        notice(window_,tr(L"Josts Resident no está instalado."),L"Josts Sync",MB_OK|MB_ICONINFORMATION); refresh_resident_status(); return;
+        notice(window_,tr(L"Josts no está instalado como residente en este equipo."),L"Josts",MB_OK|MB_ICONINFORMATION); refresh_resident_status(); return;
     }
-    if(notice(window_,tr(L"Desinstalar Josts Sync detendrá y eliminará el servicio residente y su copia protegida. Los bloqueos ya aplicados en hosts se conservarán hasta que los retires desde Josts. Esta operación requiere autorización administrativa. ¿Continuar?"),tr(L"Desinstalar Josts Sync"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES) return;
+    if(notice(window_,tr(L"Desinstalar Josts retirará el servicio residente, su copia protegida, caché y estado local, y quitará únicamente el bloque administrado por Josts del archivo hosts. Las entradas externas se conservarán. Windows solicitará autorización administrativa. ¿Continuar?"),tr(L"Desinstalar Josts de este equipo"),MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES) return;
     DWORD code=ERROR_SUCCESS; std::wstring error;
     const bool ok=request_resident_remove(window_,code,error);
-    const std::wstring message=ok?tr(L"Josts Resident fue desinstalado."):(!error.empty()?error:tr(L"No se pudo desinstalar Josts Resident."));
+    const std::wstring message=ok?tr(L"Josts fue desinstalado de este equipo y se retiraron sus bloqueos."):(!error.empty()?error:tr(L"No se pudo completar la desinstalación de Josts."));
     report(message); SetWindowTextW(progress_text_,message.c_str()); refresh_resident_status();
-    notice(window_,message.c_str(),L"Josts Sync",MB_OK|(ok?MB_ICONINFORMATION:MB_ICONERROR));
+    notice(window_,message.c_str(),L"Josts",MB_OK|(ok?MB_ICONINFORMATION:MB_ICONERROR));
 }
 void Ui::about() { AboutData data{regular_,icons_,instance_}; DialogBoxParamW(instance_,MAKEINTRESOURCEW(IDD_ABOUT),window_,about_dialog,(LPARAM)&data); }
 int Ui::notice(HWND owner,const wchar_t* message,const wchar_t* title,UINT flags) { return dark_message(instance_,regular_,icons_,owner,message,title,flags); }
